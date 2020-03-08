@@ -27,7 +27,7 @@ public:
     }
 
     double operator() (double timepoint) {
-        return points.find(timepoint)->second;
+        return points[timepoint];
     }
 
 private:
@@ -47,7 +47,8 @@ public:
     }
 
     double operator() (double timepoint) {
-        return L(points.find(timepoint)->second);
+        //return L(points[timepoint]);
+        return points[timepoint];
     }
 
 private:
@@ -84,7 +85,7 @@ public:
     }
 
     double operator() (double timepoint) {
-        return points.find(timepoint)->second;
+        return points[timepoint];
     }
 
 private:
@@ -131,32 +132,39 @@ const std::vector<double>& yields,
 */
 class InterestRateSwap {
 public:
-    InterestRateSwap(double _notional, float _initial_cashflow, int _maturity, double _K, vector<double>& _floating_schedule, vector<double>& _fixed_schedule, YieldCurveTermStructure &forward_rate, DiscountFactorsTermStructure &dct_factors) :
-    notional(_notional), initial_cashflow(_initial_cashflow), maturity(_maturity), K(_K), floating_schedule(_floating_schedule), fixed_schedule(_fixed_schedule), L(forward_rate), dcf_curve(dct_factors)
+    InterestRateSwap(double _notional, int start_day, int _maturity, double _K, vector<double>& _floating_schedule, vector<double>& _fixed_schedule, YieldCurveTermStructure &forward_rate, DiscountFactorsTermStructure &dct_factors) :
+    notional(_notional), initial_cashflow(start_day), maturity(_maturity), K(_K), floating_schedule(_floating_schedule), fixed_schedule(_fixed_schedule), L(forward_rate), dcf(dct_factors)
     {
+          calculate();
     };
 
+    double floatingLeg() {
+        double result = 0.0;
+        double dtau = 0.5;
+        for (int i = initial_cashflow + 1; i < floating_schedule.size(); i++) {
+            double point = floating_schedule[i];
+            result += dtau * L(point) * notional * dcf(point) ;
+        }
+        return result;
+    }
+
+    double fixedLeg() {
+        double result = 0.0;
+        double dtau = 0.5;
+        for (int i = initial_cashflow + 1; i < fixed_schedule.size(); i++) {
+            double point = fixed_schedule[i];
+            result += dtau * K * notional * dcf(point) ;
+        }
+        return result;
+    }
+
+    void calculate() {
+        floating_leg = floatingLeg() ;
+        fixed_leg = fixedLeg();
+        npv = floating_leg - fixed_leg;
+    }
+
     double price() {
-        double _fixedLeg = 0.0, _floatingLeg = 0.0;
-        double date = 0;
-
-        //Find the first table entry whose value is >= caller's x value
-        auto iter = std::upper_bound(fixed_schedule.begin(), fixed_schedule.end(), initial_cashflow);
-        if (iter != fixed_schedule.end()) {
-            _fixedLeg = std::accumulate(iter, fixed_schedule.end(), 0.0, [this](double val, double x) {
-                return val + (x * K * dcf_curve(x));
-            });
-        }
-
-        iter = std::upper_bound(floating_schedule.begin(), floating_schedule.end(), initial_cashflow);
-        if (iter != floating_schedule.end()) {
-            _floatingLeg = std::accumulate(iter, floating_schedule.end(), 0.0, [this](double val, double x) {
-                return val + (x * L(x) * dcf_curve(x));
-            });
-        }
-
-        double npv = notional * (_floatingLeg - _fixedLeg);
-
         return npv;
     }
 
@@ -165,11 +173,59 @@ private:
     double notional;
     double maturity;
     double K;
+    double floating_leg;
+    double fixed_leg;
+    double npv = 0.0;
     std::vector<double>& floating_schedule;
     std::vector<double>& fixed_schedule;
     YieldCurveTermStructure& L;
-    DiscountFactorsTermStructure &dcf_curve;
+    DiscountFactorsTermStructure &dcf;
 };
 
+
+// CVA pricing using trapezoidal method
+
+class CVAPricer {
+public:
+    CVAPricer(double LGD, TermStructure eexposure, TermStructure pd, DiscountFactorsTermStructure dcf) :
+            lgd(LGD), ee_curve(eexposure), pd_curve(pd), df_curve(dcf)
+    {
+        calculate();
+    }
+
+    inline double cva(double t) {
+        double result = ee_curve(t);
+        result *= pd_curve(t);
+        result *= df_curve(t);
+        return result;
+    }
+
+    // Apply Trapezoidal Rule for Integration
+    void calculate() {
+        double dtau = 0.5;
+        // Computing sum of first and last terms in above formula
+        double s = cva(0.0) + cva(25.0);
+        // Adding middle terms in above formula
+        for (int i = 1; i < 51; i++) {
+            double delta = i * dtau;
+            s += 2 * cva(i*dtau);
+        }
+        // h/2 indicates (b-a)/2n. Multiplying h/2 with s.
+        value = 0.5 * dtau * s;
+        // calculate CVA
+        value = lgd * 0.5 * value;
+    }
+
+    double price() {
+        return value;
+    }
+
+private:
+    double value;
+    double lgd;
+    TermStructure ee_curve;
+    TermStructure pd_curve;
+    DiscountFactorsTermStructure df_curve;
+};
 
 
