@@ -6,6 +6,21 @@
 
 // TODO - implement own integration/interpolation keep it simple using tra[ezium rule
 
+template <typename F>
+float trapezoidal(F f, double a, double b, int n, double h)
+{
+    // Computing sum of first and last terms in above formula
+    double s = f(a) + f(b);
+
+    // Adding middle terms in above formula
+    for (int i = 1; i < n; i++)
+        s += 2 * f(a + i*h);
+
+    // h/2 indicates (b-a)/2n. Multiplying h/2 with s.
+    return 0.5 * h * s;
+}
+
+
 class linear_interpolator {
 public:
     linear_interpolator(const std::vector<double>& values, double t0 = 0.0, double h = 0.5)
