@@ -21,7 +21,10 @@ std::vector<double> floating_schedule = {0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1
                                    9.0, 9.25, 9.5, 9.75, 10.0, 10.25, 10.5, 10.75, 11.0, 11.25, 11.5, 11.75, 12.0, 12.25, 12.5, 12.75, 13.0, 13.25, 13.5, 13.75, 14.0, 14.25, 14.5, 14.75, 15.0, 15.25, 15.5, 17.75, 16.0, 16.25, 16.5, 16.75,
                                    17.0, 17.25, 17.5, 18.0, 18.25, 18.5, 18.75, 19.0, 19.25, 19.5, 19.75, 20.0, 20.25, 20.5, 20.75, 21.0, 21.25, 21.5, 21.75, 22.0, 22.25, 22.5, 22.75, 23.0, 23.25, 23.5, 23.75, 24.0, 24.25, 24.5, 24.75, 25.0 };
 
-std::vector<double> fixed_schedule = {0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 22.0};
+std::vector<double> fixed_schedule = {0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5, 5.75, 6.0, 6.25, 6.5, 6.75, 7.0, 7.25, 7.5, 7.75, 8.0, 8.25, 8.5, 8.75,
+                                         9.0, 9.25, 9.5, 9.75, 10.0, 10.25, 10.5, 10.75, 11.0, 11.25, 11.5, 11.75, 12.0, 12.25, 12.5, 12.75, 13.0, 13.25, 13.5, 13.75, 14.0, 14.25, 14.5, 14.75, 15.0, 15.25, 15.5, 17.75, 16.0, 16.25, 16.5, 16.75,
+                                         17.0, 17.25, 17.5, 18.0, 18.25, 18.5, 18.75, 19.0, 19.25, 19.5, 19.75, 20.0, 20.25, 20.5, 20.75, 21.0, 21.25, 21.5, 21.75, 22.0, 22.25, 22.5, 22.75, 23.0, 23.25, 23.5, 23.75, 24.0, 24.25, 24.5, 24.75, 25.0 };
+
 
 
 // Random number generation
@@ -44,6 +47,8 @@ auto musiela_sde = [](const double dt, int dimension, const double r0, double dr
 {
     double mu = drift * dt;
     double vol = 0.0;
+
+    #pragma UNROLL(3)
     for (int i = 0; i < dimension; i++) {
         vol +=  volatilities[i] * phi[i];
     }
@@ -62,9 +67,12 @@ void stochastic_process(T sde, const int dimension, const int tenors, std::vecto
 
     for (int t = 0; t < tenors - 1; t++) {
         drift = drifts[t];
+
+        #pragma UNROLL(3)
         for (int d = 0; d < dimension; d++) {
             volatility.push_back( volatilities[d][t] );
         }
+
         dF = r0[t+1] - r0[t];
         r[t] = sde(dt, dimension, r0[t], drift, volatility, phi_random, dF, dtau);
     }
@@ -118,10 +126,7 @@ double mc_engine(int simN, int timepoints_size, double tenor_size,  std::vector<
 
     double cva = tolerance;
 
-    // Fwd Rates Grid
     std::vector<std::vector<double>> fwd_rates;
-
-    // Simulation Grids
     std::vector<std::vector<double>> mm_grid;
 
     // do Print Monte Carlo Generated Grid
@@ -144,12 +149,13 @@ double mc_engine(int simN, int timepoints_size, double tenor_size,  std::vector<
         std::vector<double> mark_to_marking(timepoints_size);
 
         // For each tenors across timepoints
-        for (int cashflow = 1; cashflow < timepoints_size - 1; cashflow++)
+        int delta = 0;
+        for (int cashflow = 0; cashflow < timepoints_size - 1; cashflow++)
         {
-           int delta = cashflow * 25; // optimize this waste of cpu cycles
-           YieldCurveTermStructure forward_rate(fwd_rates[delta], dtau); // use an iterator here
-           DiscountFactorsTermStructure zcb(fwd_rates[delta], dtau);
-           InterestRateSwap irs(notional, timepoints[cashflow], maturity, K, floating_schedule, fixed_schedule, forward_rate, zcb); // start
+           delta += 25; // optimize this waste of cpu cycles
+           YieldCurveTermStructure forward_rate(fwd_rates[delta]); // use an iterator here
+           DiscountFactorsTermStructure zcb(fwd_rates[delta]);
+           InterestRateSwap irs(notional, cashflow + 1, maturity, K, floating_schedule, fixed_schedule, forward_rate, zcb); // start
            mark_to_marking[cashflow] = irs.price();
         }
 
@@ -160,7 +166,7 @@ double mc_engine(int simN, int timepoints_size, double tenor_size,  std::vector<
         fwd_rates.clear();
 
         // Display in the stdout the simulated Curve
-        display_curve(mark_to_marking);
+        //display_curve(mark_to_marking);
     }
 
 
@@ -181,8 +187,11 @@ double mc_engine(int simN, int timepoints_size, double tenor_size,  std::vector<
         eexposure[t] = sum * factor;
     }
 
+    // Clear the mm_grid simulation for next iteration
+    mm_grid.clear();
+
     // Display in the stdout the simulated forward rate
-    display_curve(eexposure);
+    //display_curve(eexposure);
 
     // TODO - implement probability of default calculation (pd)
     // cpu - single thread implementation
@@ -192,16 +201,8 @@ double mc_engine(int simN, int timepoints_size, double tenor_size,  std::vector<
     TermStructure pd_curve( pd );
     DiscountFactorsTermStructure df_curve(spot_rates);
 
-    auto cva_operator = [&ee_curve, &pd_curve, &df_curve](double t) {
-        double _cva = ee_curve(t);
-        _cva *= pd_curve(t);
-        _cva *= df_curve(t);
-        return _cva;
-    };
-
     // integration using trapezoidal curve
-    //cva = boost::math::quadrature::trapezoidal(cva_operator, 0.0, 51.0, 1e-6);
-    cva *= LGD * 0.5;
+    cva = CVAPricer(LGD, eexposure, pd, df_curve).price();
 
     return cva;
 }
