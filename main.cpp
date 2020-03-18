@@ -10,6 +10,9 @@
 
 using namespace std;
 
+const int timepoints_size = 51;
+const int tenor_size = 51;
+
 vector<double> tenor = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5, 12.0, 12.5, 13.0, 13.5, 14.0, 14.5, 15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5,
                        20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0 };
 
@@ -31,27 +34,103 @@ std::vector<std::vector<double>> volatilities = //(3, std::vector<double>(51, 0.
 std::vector<double> drifts = //(51);
 {0.000000,0.000036,0.000069,0.000099,0.000128,0.000155,0.000182,0.000208,0.000233,0.000257,0.000280,0.000303,0.000324,0.000345,0.000364,0.000381,0.000397,0.000412,0.000426,0.000438,0.000449,0.000459,0.000469,0.000478,0.000487,0.000496,0.000505,0.000515,0.000526,0.000538,0.000551,0.000566,0.000583,0.000601,0.000621,0.000643,0.000667,0.000692,0.000718,0.000746,0.000774,0.000803,0.000832,0.000861,0.000889,0.000916,0.000943,0.000967,0.000991,0.001013,0.001035};
 
+// Spreads
 
-int main() {
+std::vector<double> spreads_data = {
+        208.5, 187.5, 214, 235, 255, 272, 225, 233, 218, 215, 203, 199, 202, 196.71, 225.92, 219.69, 229.74, 232.12, 223.02, 224.45, 212, 211.51, 206.25, 203.37, 212.94, 211.02, 210.06, 206.23, 211.49, 209.09, 204.3, 204.77,
+        199.98, 200.94, 202.38, 205.72, 204.76, 210.02, 209.54, 209.54, 212.41, 213.35, 208.57, 208.56, 220.05, 226.26, 227.2, 222.89, 228.63, 231.5, 247.75, 255.37, 251.07,
+        256.33, 252.01, 254.88, 246.98, 238.12, 241.95, 244.33, 252.45, 250.53, 246.71, 256.26, 255.78, 257.19, 247.63, 237.12, 234.73, 226.36, 218, 219.9, 224.68,
+        221.81, 220.38, 211.77, 203.17, 206.04, 220, 218, 225, 217.5, 215, 220.5, 250.25, 260.5, 269.5, 258, 258.5, 263, 274.5, 265.5, 268.5, 273.5, 275, 271.5, 263.75, 275, 287, 281, 271, 280.25, 284.5, 272, 275.5, 264.25, 274.25,
+        269.5, 264.5, 256.5, 258, 265, 260, 262.5, 268, 272.25, 271, 274, 278.5, 278.5, 284.5, 290, 274, 264.5, 262.5, 247.75, 250.5, 248, 244.75, 246.5, 237.5, 240.5, 236,
+        245.5, 237.75, 234.25, 235, 224, 215.5, 217, 217, 220.5, 208.5, 202.47, 203.43, 206.77, 205.33, 200.05, 202.91, 205.05, 222.51, 218.9, 218.43, 221.31, 217.24, 218.67,
+        216.52, 216.5, 217.94, 208.37, 205.01, 200.95, 203.1, 203.81, 206.2, 204.28, 200.93, 202.36, 200.44, 197.8, 199.23, 209.74, 211.18, 214.05, 215, 228.62, 233.63, 222.86, 218.8, 214.49, 217.36, 216.4, 213.52, 215.43,
+        219.49, 214.22, 218.05, 211.1, 205.13, 207.75, 201.78, 199.39, 200.58, 199.14, 192.45, 188.38, 191.24, 192.9, 192.18, 190.26, 187.88, 186.44, 183.09, 181.18, 194.75,
+        194.75, 200.75, 203, 204, 207.5, 207.25, 209, 205.75, 207.5, 203.5, 202.25, 199.5, 202, 201, 198.25, 191.5, 187.75, 188.75, 190, 193, 193.75, 200, 200, 204, 194.5,
+        192.25, 189.5, 188.5, 186.5, 187.5, 193.75, 196.5, 205, 204.25, 208, 211.75, 217, 213.25, 212.5, 213.75, 211.25, 214, 220.5, 212.5, 228, 225.75, 226.5, 233, 228.25, 225.5, 229, 229.5, 220.25, 220, 220, 223, 221, 216.5,
+        211.25, 199.75, 192.5, 193.94, 192.74, 193.7, 195.6, 194.4, 195.36, 193.92, 185.79, 179.81, 162.13, 165.23, 168.81, 172.63, 168.81, 164.51, 159.01, 159.25, 154.95,
+        152.08, 153.75, 153.74, 157.32, 160.66, 157.79, 152.54, 152.54, 156.84, 159.22, 162.08, 161.13, 166.38, 168.75, 73.75, 174.93, 182.8, 185.9, 213.58, 212.15,
+        207.84, 214.76, 211.17, 206.62, 199.46, 196.37, 191.59, 183.95, 185.15, 172.97, 169.38, 160.08, 162.47, 159.6, 157.21, 147.91, 145.29, 146.01, 141.95, 143.38, 136, 124.55, 119.07, 116.69, 122.17, 122.41, 122.41, 136, 136.5,
+        138.75, 138.5, 136.5, 135, 131.5, 130.75, 131.5, 133.25, 133.75, 134, 136.5, 133.75, 131, 121.5, 120.5, 115.5, 114.25, 110.25, 110, 110, 110.5, 111, 111.5, 110,
+        112, 112, 113.25, 115.5, 120, 115.75, 112.75, 114, 112.25, 114.5, 117, 118.25, 127, 139.5, 131, 131.75, 133, 130, 127, 132.25, 128.5, 132.25, 134.5, 136.5, 135, 138.25,
+        138, 134.5, 138, 138.5, 135, 130.75, 132.5, 129.75, 125.5, 124.5, 125, 120, 119, 121.05, 122.49, 122.97, 124.88, 119.61, 119.61, 126.79, 126.78, 127.26, 127.73, 127.26, 122.47, 118.17, 118.41, 118.65, 120.08, 123.42, 119.84,
+        118.64, 122.71, 124.86, 121.27, 120.79
+};
 
+// CVA Calculation
+double calculate_cva(std::vector<std::vector<double>> &mm_grid, double LGD, std::vector<double> &spot_rates, std::vector<double> &spreads_data, int simN, int timepoints_size, double dtau = 0.5) {
+       std::vector<double> eexposure(timepoints_size, 0.00);
+
+       // calculate expected exposure profile  Average [ Max ( irs[i], 0) ] , n * 51 reductions
+       const double factor = 1.0/(double)simN;
+       for (int t = 0; t < timepoints_size; t++) {
+           double sum = 0.0;
+           for (int sim = 0; sim < simN; sim++) {
+               sum += ( mm_grid[sim][t] > 0) ? mm_grid[sim][t] : 0.0;
+           }
+           eexposure[t] = sum * factor;
+       }
+
+       // Display in the stdout the simulated forward rate
+       //display_curve(eexposure);
+
+       // Generate CVA = LGD * INTEGRAL (EE(t), PD(t), DF(t)) (T0, T) done by lambda Apply Trapezoidal Rule integration
+       TermStructure ee_curve( eexposure );
+       TermStructure spreads( spreads_data );
+       DiscountFactorsTermStructure dcf_curve(spot_rates);
+
+       // CDS bootstrap
+       DefaultProbabilityTermStructure default_prob(timepoints, spreads, dcf_curve, LGD, dtau);
+
+       // integration using trapezoidal curve
+       double cva = CVAPricer(LGD, eexposure, default_prob, dcf_curve).price();
+
+       return cva;
+}
+
+
+int main() { // LGD, PDF, VOL, DRIFTS
+
+    // Calibration
     //shared_ptr<std::vector<double>> v = std::make_shared<std::vector<double>>(std::initializer_list<double>{ 1, 2, 3, 4, 5 });
     //std::cout << (*v)[0];
 
     // volatitliy & drift calibration using linear least square curve fitting
     //callibrate_volatilities(/*yield_curve_matrix, */ volatilities, drifts );
 
-    // mc simulation to build the EE(t)
-    // [0, 51] [0.5, 51] [1,51] [] ...[50,51] max positive values IRS price
-    double cva = 0.0;
+    // Convert Spreads into 10000 bps
+    std::vector<double> spreads_bps;
+    std::transform(spreads_data.begin(), spreads_data.end(), std::back_inserter(spreads_bps), [](double x) {
+        return 0.0001 * x;
+    });
+
+    double LGD = 0.40;
+    /*
+    TermStructure spreads( spreads_data );
+    DiscountFactorsTermStructure discountFactors(spot_rates);
+    DefaultProbabilityTermStructure survivalProbabilityCurve(timepoints, spreads, discountFactors, LGD, 0.5);
+    std::vector<double> defaultProbabilityCurve;
+    for (double timepoint : timepoints) {
+        defaultProbabilityCurve.push_back( survivalProbabilityCurve(timepoint) );
+    }
+     */
+
+    // Exposure simulation result Grid
+    std::vector<std::vector<double>> mm_grid(7000, std::vector<double>(timepoints_size, 0.0) );
+
+    // Simulation header ouput
+    std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
     //  TODO - Increase the simulations numbers and analyze convergence and std deviation
-    for (int simN = 1000; simN < 100000; simN += 3000) {
+    for (int simN = 500; simN < 7000; simN += 250) {
+
         auto start = std::chrono::high_resolution_clock::now();
 
-        cva = mc_engine(simN, 51, 51.0, /* StochasticProcess& stochasticProcess, */ spot_rates, volatilities, drifts );
+        mc_engine(mm_grid, simN, timepoints_size, 51.0,spot_rates, volatilities, drifts );
 
         auto finish = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = finish - start;
+
+        double cva = calculate_cva(mm_grid, LGD, spot_rates, spreads_data, simN, timepoints_size);
 
         std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << elapsed.count() << std::endl;
     }

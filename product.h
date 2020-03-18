@@ -16,6 +16,14 @@ using namespace std;
 // TODO - Implement an ExpectedExposureTermStructure (grid of mark to market) and return the EE(t) curve with interpolation
 // TODO - Implement an ProbabilityOfDefaultTermStructure (grid of mark to market) and return the EE(t) curve with interpolation
 
+std::vector<double> timepoints = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5, 12.0, 12.5, 13.0, 13.5, 14.0, 14.5, 15.0, 15.5, 16.0, 16.5,
+                                  17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0 };
+
+std::vector<double> floating_schedule(timepoints);
+
+std::vector<double> fixed_schedule = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 25.0 };
+
+
 class TermStructure {
 public:
     TermStructure(std::vector<double>& curve, double t0 = 0, double h = 0.5) {
@@ -65,19 +73,15 @@ public:
     DiscountFactorsTermStructure(std::vector<double>& fwd_rates, double dtau = 0.5)
     {
         std::vector<double> rates(fwd_rates);
-        std::reverse(std::begin(rates), std::end(rates));
-
         std::vector<double> z(fwd_rates.size());
-        std::partial_sum(rates.begin(), rates.end(), z.begin());
-        std::reverse(std::begin(z), std::end(z));
 
-        double t = 0;
+        std::partial_sum(rates.begin(), rates.end(), z.begin());
         std::transform(z.begin(), z.end(), z.begin(), [&dtau](double r) {
-            return std::exp( -(dtau * r) );
+            double discount = std::exp( -r * dtau );
+            return discount;
         });
 
         double x = 0.0;
-
         for ( auto iter = z.begin(); iter != z.end(); iter++) {
             points.insert({x, *iter});
             x += dtau;
@@ -93,6 +97,43 @@ private:
 };
 
 
+class DefaultProbabilityTermStructure {
+public:
+    DefaultProbabilityTermStructure(std::vector<double> &timepoints, TermStructure &spreads, DiscountFactorsTermStructure &discountFactorCurve,  double L, double dtau) {
+        const int N = timepoints.size();
+
+        std:vector<double> psurv(N, 1.0);
+
+        psurv[1] = L / (spreads(timepoints[1])*dtau + L);
+
+        points[0.0] = 1.0;
+        points[0.5] = psurv[1];
+
+        for (int i = 2; i < N; i++) {
+            double timepoint = timepoints[i];
+            double spread = spreads(timepoint);
+            double psurvival = 0.0;
+            for (int t = 1; t < i; t++) {
+                psurvival += L * psurv[t-1];
+                psurvival -= (L + dtau * spread);
+                psurvival *= psurv[t];
+                psurvival *= discountFactorCurve(timepoints[t]);
+            }
+            psurvival /= ( discountFactorCurve(timepoint) * (L + dtau * spread) );
+            psurvival += (psurv[i-1] * L) / ( L + dtau * spread);
+            psurv[i] = psurvival;
+            points[timepoint] = psurvival > 0 ? psurvival : -psurvival;
+        }
+    }
+
+    double operator() (double timepoint) {
+        return points[timepoint];
+    }
+
+private:
+
+    std::map<double,double,std::less<double>> points;
+};
 
 /*
 * Given MC HJM simulation Grid extract Forward Rate and ZCB
@@ -141,7 +182,7 @@ public:
     double floatingLeg() {
         double result = 0.0;
         double dtau = 0.5;
-        for (int i = initial_cashflow + 1; i < floating_schedule.size(); i++) {
+        for (int i = initial_cashflow; i < floating_schedule.size(); i++) {
             double point = floating_schedule[i];
             result += dtau * L(point) * notional * dcf(point) ;
         }
@@ -151,7 +192,7 @@ public:
     double fixedLeg() {
         double result = 0.0;
         double dtau = 0.5;
-        for (int i = initial_cashflow + 1; i < fixed_schedule.size(); i++) {
+        for (int i = initial_cashflow; i < fixed_schedule.size(); i++) {
             double point = fixed_schedule[i];
             result += dtau * K * notional * dcf(point) ;
         }
@@ -187,44 +228,34 @@ private:
 
 class CVAPricer {
 public:
-    CVAPricer(double LGD, TermStructure eexposure, TermStructure pd, DiscountFactorsTermStructure dcf) :
-            lgd(LGD), ee_curve(eexposure), pd_curve(pd), df_curve(dcf)
+    CVAPricer(double LGD, TermStructure eexposure, DefaultProbabilityTermStructure pd, DiscountFactorsTermStructure dcf) :
+            cva(0.0),lgd(LGD), ee_curve(eexposure), pd_curve(pd), df_curve(dcf)
     {
         calculate();
-    }
-
-    inline double cva(double t) {
-        double result = ee_curve(t);
-        result *= pd_curve(t);
-        result *= df_curve(t);
-        return result;
     }
 
     // Apply Trapezoidal Rule for Integration
     void calculate() {
         double dtau = 0.5;
-        // Computing sum of first and last terms in above formula
-        double s = cva(0.0) + cva(25.0);
-        // Adding middle terms in above formula
         for (int i = 1; i < 51; i++) {
-            double delta = i * dtau;
-            s += 2 * cva(i*dtau);
+            float t = timepoints[i];
+            float t0 = timepoints[i-1];
+            double value = ee_curve(t) - ee_curve(t0);
+            value *= pd_curve(t0) - pd_curve(t);
+            cva += value;
         }
-        // h/2 indicates (b-a)/2n. Multiplying h/2 with s.
-        value = 0.5 * dtau * s;
-        // calculate CVA
-        value = lgd * 0.5 * value;
+        cva *= -lgd;
     }
 
     double price() {
-        return value;
+        return cva;
     }
 
 private:
-    double value;
+    double cva;
     double lgd;
     TermStructure ee_curve;
-    TermStructure pd_curve;
+    DefaultProbabilityTermStructure pd_curve;
     DiscountFactorsTermStructure df_curve;
 };
 
