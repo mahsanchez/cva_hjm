@@ -3,8 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <map>
-
-// TODO - implement own integration/interpolation keep it simple using tra[ezium rule
+#include <cmath>
 
 template <typename F>
 float trapezoidal(F f, double a, double b, int n, double h)
@@ -23,24 +22,39 @@ float trapezoidal(F f, double a, double b, int n, double h)
 
 class linear_interpolator {
 public:
-    linear_interpolator(const std::vector<double>& values, double t0 = 0.0, double h = 0.5)
+    linear_interpolator() {
+    }
+
+    linear_interpolator(const std::vector<double>& x, const std::vector<double>& values) {
+        initialize(x, values);
+    }
+
+    void initialize(const std::vector<double>& x, const std::vector<double>& values)
     {
-        double x = 0.0;
-        double index = 0;
-
-        for (int i = 0; i < t0; i++) {
-            points.push_back( {x, 0.0} );
-        }
-
-        for (int i = t0; i < values.size(); i++) {
-            x = index * h; index++;
-            points.push_back( {x, values[i]} );
+        for (int i = 0; i < values.size(); i++) {
+            points.push_back( {x[i], values[i]} );
         }
     }
 
     double operator() (double x) const {
+         return find(x);
+    }
+
+    double find(double x) const {
         if (points.size() == 0) {
             return 0.0;
+        }
+
+        //the element already exists no interpolation is needed
+        auto pointIter = std::find_if(points.begin(), points.end(), [x](std::pair<double, double> point ) {
+            if (point.first == x) {
+                return true;
+            }
+            return false;
+        });
+
+        if (pointIter != std::end(points))  {
+           return pointIter->second;
         }
 
         //Define a lambda that returns true if the x value of a point pair is < the caller's x value
@@ -69,7 +83,6 @@ public:
         double upperY{iter->second};
         double lowerX{(iter - 1)->first};
         double lowerY{(iter - 1)->second};
-
         double deltaY{upperY - lowerY};
         double deltaX{upperX - lowerX};
 
@@ -79,3 +92,43 @@ public:
 private:
     std::vector<std::pair<double, double>> points;
 };
+
+
+
+/*
+ * matrix transposition rectangular matrix
+Inspired by the Wikipedia - Following the cycles algorithm description, I came up with following C++ implementation:
+ https://stackoverflow.com/questions/9227747/in-place-transposition-of-a-matrix
+ https://www.geeksforgeeks.org/inplace-m-x-n-size-matrix-transpose/?ref=rp
+
+#include <iostream>  // std::cout
+#include <iterator>  // std::ostream_iterator
+#include <algorithm> // std::swap (until C++11)
+#include <vector>
+
+template<class RandomIterator>
+void transpose(RandomIterator first, RandomIterator last, int m)
+{
+    const int mn1 = (last - first - 1);
+    const int n   = (last - first) / m;
+    std::vector<bool> visited(last - first);
+    RandomIterator cycle = first;
+    while (++cycle != last) {
+        if (visited[cycle - first])
+            continue;
+        int a = cycle - first;
+        do  {
+            a = a == mn1 ? mn1 : (n * a) % mn1;
+            std::swap(*(first + a), *cycle);
+            visited[a] = true;
+        } while ((first + a) != cycle);
+    }
+}
+
+int main()
+{
+    int a[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+    transpose(a, a + 8, 4);
+    std::copy(a, a + 8, std::ostream_iterator<int>(std::cout, " "));
+}
+ * */

@@ -9,143 +9,103 @@
 
 #include "product.h"
 
-//#include <boost/math/quadrature/trapezoidal.hpp>
-
-
-// Random number generation
-std::mt19937 mt_rand1(0);
-std::mt19937 mt_rand2(100);
-std::mt19937 mt_rand3(6000);
-std::uniform_real_distribution<> phi1(0.0, 1.0);
-std::uniform_real_distribution<> phi2(0.0, 1.0);
-std::uniform_real_distribution<> phi3(0.0, 1.0);
-
-
-void display_curve(std::vector<double> &curve) {
-    std::cout << std::setprecision(6)<< std::fixed;
-    std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, ","));
-    std::cout << std::endl;
-}
+// The random factor in the SDE requires gaussian random values . Hence error function approximate to inverse CDF erfInv(uniform)
+// Note : Use allways the same seed value
+std::random_device rd{};
+std::mt19937 uniform_distribution{rd()};
+std::normal_distribution<> gaussian_distribution{0.0,1.0};
 
 // We simulate f(t+dt)=f(t) + dfbar   where SDE dfbar =  m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt (Musiela Parameterisation HJM)
-auto musiela_sde = [](const double dt, int dimension, const double r0, double drift, std::vector<double> volatilities, std::vector<double> phi, double dF, double dtau)
+void stochastic_process(const int dimension, const int tenors, std::vector<std::vector<double>> &fwd_rates, std::vector<double> &drifts, std::vector<std::vector<double>> &volatilities, std::vector<double> &phi_random, const int sim, const double dt, double dtau)
 {
-    double mu = drift * dt;
-    double vol = 0.0;
-
-    #pragma UNROLL(3)
-    for (int i = 0; i < dimension; i++) {
-        vol +=  volatilities[i] * phi[i];
-    }
-    double difussion = vol * std::sqrt(dt);
-    double adjustment = (1/dtau) * dF * dt;
-    double result = r0 + mu + difussion + adjustment;
-    return result;
-};
-
-template<typename T>
-void stochastic_process(T sde, const int dimension, const int tenors, std::vector<double> &r0, std::vector<double> &r, std::vector<double> &drifts, std::vector<std::vector<double>> &volatilities, std::vector<double> &phi_random, const double dt, double dtau)
-{
-    double drift;
     double dF;
-    std::vector<double> volatility;
+    double sum_vol;
 
     for (int t = 0; t < tenors - 1; t++) {
-        drift = drifts[t];
-
-        #pragma UNROLL(3)
-        for (int d = 0; d < dimension; d++) {
-            volatility.push_back( volatilities[d][t] );
+        sum_vol = 0.0;
+        for (int i = 0; i < dimension; i++) {
+            sum_vol +=  volatilities[i][t] * phi_random[i];
         }
-
-        dF = r0[t+1] - r0[t];
-        r[t] = sde(dt, dimension, r0[t], drift, volatility, phi_random, dF, dtau);
+        dF = fwd_rates[sim-1][t+1] - fwd_rates[sim-1][t];
+        double sde = fwd_rates[sim-1][t];
+        sde += drifts[t] * dt;
+        sde += sum_vol * std::sqrt(dt);
+        sde += (dF/dtau) * dt;
+        fwd_rates[sim][t] = sde;
     }
 
     // simulate last tenor
-    drift = drifts[tenors-1];
-    volatility.clear();
-    for (int d = 0; d < dimension; d++) {
-        volatility.push_back( volatilities[d][tenors-1] );
+    int t = tenors - 1;
+    sum_vol = 0.0;
+    for (int i = 0; i < dimension; i++) {
+        sum_vol +=  volatilities[i][t] * phi_random[i];
     }
-    dF = r0[tenors-1] - r0[tenors-2];
-    r[tenors-1] = sde(dt, dimension, r0[tenors-1], drift, volatility, phi_random, dF, dtau);
+    dF = fwd_rates[sim-1][t] - fwd_rates[sim-1][t-1];
+    double sde = fwd_rates[sim-1][t];
+    sde += drifts[t] * dt;
+    sde += sum_vol * std::sqrt(dt);
+    sde += (dF/dtau) * dt;
+    fwd_rates[sim][t] = sde;
 };
 
 
 // path_generator
-// TODO - implement a vector of RandomGenerator variables and MC Variance Reduction
 void path_generator(const int pathN, std::vector<std::vector<double>> &fwd_rates, std::vector<double> &spot_rates, std::vector<double> &drifts, std::vector<std::vector<double>> &volatility,  const int tenors,  double dt,  double dtau)
 {
     int dimension = 3;
-    std::vector<double> rates(tenors, 0.0);
-    std::vector<double> fwd(spot_rates);
-    std::vector<double> phi(dimension, 0.0);
 
-    // path generator
+    // generate randoms across all paths for SDE
+    std::vector<std::vector<double>> phi_randoms(pathN, std::vector<double>(dimension, 0.0));
+    for (int i = 0; i < phi_randoms.size(); i++) {
+        for(int j = 0; j < dimension; j++) {
+            phi_randoms[i][j] = gaussian_distribution(uniform_distribution);
+        }
+    }
+
+    // path generator evolve the full forward rate curve
     for (int sim = 1; sim < pathN; sim++) {
-        phi[0] = phi1(mt_rand1);
-        phi[1] = phi2(mt_rand2);
-        phi[2] = phi3(mt_rand3);
-
-        // evolve the full forward rate curve
-        stochastic_process(musiela_sde, dimension, tenors, fwd, rates, drifts, volatility, phi, dt, dtau);
-
-        // store simulated rates in the path
-        std::copy(rates.begin(), rates.end(), fwd_rates[sim].begin());
-
-        // reuse the last tenor for next iteration
-        std::copy(rates.begin(), rates.end(), fwd.begin());
+        stochastic_process(dimension, tenors, fwd_rates, drifts, volatility, phi_randoms[sim], sim, dt, dtau);
     }
 }
 
-
-// Run simulations per block, if end of block reached but current_simulations < total_simulations store avg (exposure) on mb_grid[ simulation_block]
-// take the expected exposure from the memory block
-
-void mc_engine(std::vector<std::vector<double>>& mm_grid, int simN, int timepoints_size, double tenor_size,  std::vector<double> &spot_rates, std::vector<std::vector<double>>& volatilities, std::vector<double> &drifts, int blockSize = 1000, double dt = 0.01, double dtau = 0.5, bool libor_rate = false) {
-    // IRS product information
-    double notional = 1000000; // notional
-    double K = 0.04; // fixed rates IRS
+// Monte Carlo Simulation Engine
+void mc_engine(std::vector<double> &expected_exposure, int simN, int timepoints_size, double tenor_size,  std::vector<double> &spot_rates, std::vector<std::vector<double>>& volatilities, std::vector<double> &drifts, int blockSize = 1000, double dt = 0.01, double dtau = 0.5) {
     int maturity = 51;
-    const double tolerance = 1e-6;
-    const double LGD = 0.40;
 
     const int pathN = tenor_size / dt;
 
-    std::vector<std::vector<double>> fwd_rates(pathN, std::vector<double>(timepoints_size, 0.0));
+    double notional = 1000000; double K = 0.04;
+
+    std::vector<std::vector<double>> exposures(simN, std::vector<double>(timepoints_size, 0.0));   // TODO - dynamic memory allocation
+    std::vector<std::vector<double>> fwd_rates(pathN, std::vector<double>(timepoints_size, 0.0));  // TODO - dynamic memory allocation
+
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
 
-    // do Print Monte Carlo Generated Grid
-    // gpu - divide the simulation in blocks in such a way that you can increase the number of throughput per threads vs normal strategy and benchmark
-    // aplit the simulations on equally blockSizes and use a threadblock to run then TBB store at offset (block_size * n + index) where index = [0..blocksize - 1]
+    // mc_simulation_cpu  - kernel & device code distribute equally block simulations per thread block
+    // TODO - Loop Tiling
     for (int sim = 0; sim < simN; sim++) {
-        // MC path Generation Path Generator (Stochastic Process)
+
+        // MC path Generation Path Generator or random forward rates using HJM and Musiela SDE ( CURAND )
         path_generator(pathN, fwd_rates, spot_rates, drifts, volatilities, timepoints_size, dt, dtau);
 
-        /*
-         * IRS Mark to Market and store price in the second grid for [0, maturity], [1, maturity], [2, maturity], ... , [maturity, maturity]
-         * move forward in time in fwd[1] and recalculate discount factors TT(exp(-rt))
-         * move over timepoints to build the simulation grid
-         * Uses vector iterator fwd_rate[i].begin(), fwd_rate[i].end() inside the term structures so you can move among the years
-         */
         // TODO - review the Interest Rate Swap pricing and introduce dates
-
-        // IRS pricing with HJM simulation
-        int delta = 0;
-        for (int cashflow = 0; cashflow < timepoints_size - 1; cashflow++)
-        {
-           delta += 25; // optimize this waste of cpu cycles
-           YieldCurveTermStructure forward_rate(fwd_rates[delta]); // use an iterator here
-           DiscountFactorsTermStructure zcb(fwd_rates[delta]);
-           InterestRateSwap irs(notional, cashflow + 1, maturity, K, floating_schedule, fixed_schedule, forward_rate, zcb); // start
-           mm_grid[sim][cashflow] = irs.price();
-        }
-
-        // display exposure profile for IRS on simulation [sim]
-        //display_curve(mm_grid[sim]);
+        // Vainilla Interest Rate Swap Mark to Marking Exposure profile
+        InterestRateSwapExposureEngine(exposures[sim], fwd_rates, timepoints, notional, K, maturity, dtau, dt).calculate();
     }
 
+    /*
+     * Expected Exposure  EPE(t) = 𝔼 [max(V , 0)|Ft]
+     * TODO - USe parallel reduction to produce the expected exposure profile for the IRS
+     */
+    for (int t = 0; t < timepoints_size; t++) {
+        double sum = 0.0;
+        for (int i = 0; i < simN; i += timepoints_size) {
+            sum += std::max(exposures[i][t], 0.0);
+        }
+        expected_exposure[t] = sum /(double)simN;
+    }
+
+    display_curve(expected_exposure);
 }
 
 

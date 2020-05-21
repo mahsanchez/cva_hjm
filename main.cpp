@@ -13,9 +13,6 @@ using namespace std;
 const int timepoints_size = 51;
 const int tenor_size = 51;
 
-vector<double> tenor = {0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5, 12.0, 12.5, 13.0, 13.5, 14.0, 14.5, 15.0, 15.5, 16.0, 16.5, 17.0, 17.5, 18.0, 18.5, 19.0, 19.5,
-                       20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0 };
-
 // First row is the last observed forward curve (BOE data)  //  3-dimensional Normal random vector in columns BC, BD, BE (on far right)
 std::vector<double> spot_rates = {0.046138361,0.045251174,0.042915805,0.04283311,0.043497719,0.044053792,0.044439518,0.044708496,0.04490347,0.045056615,0.045184474,0.045294052,0.045386152,0.045458337,0.045507803,0.045534188,
                                  0.045541867,0.045534237,0.045513128,0.045477583,0.04542292,0.045344477,0.04523777,0.045097856,0.044925591,0.04472353,0.044494505,0.044242804,0.043973184,0.043690404,0.043399223,0.043104398,
@@ -31,12 +28,13 @@ std::vector<std::vector<double>> volatilities = //(3, std::vector<double>(51, 0.
 };
 
 // Drift Callibration
-std::vector<double> drifts = //(51);
-{0.000000,0.000036,0.000069,0.000099,0.000128,0.000155,0.000182,0.000208,0.000233,0.000257,0.000280,0.000303,0.000324,0.000345,0.000364,0.000381,0.000397,0.000412,0.000426,0.000438,0.000449,0.000459,0.000469,0.000478,0.000487,0.000496,0.000505,0.000515,0.000526,0.000538,0.000551,0.000566,0.000583,0.000601,0.000621,0.000643,0.000667,0.000692,0.000718,0.000746,0.000774,0.000803,0.000832,0.000861,0.000889,0.000916,0.000943,0.000967,0.000991,0.001013,0.001035};
+std::vector<double> drifts = {0.000000,0.000036,0.000069,0.000099,0.000128,0.000155,0.000182,0.000208,0.000233,0.000257,0.000280,0.000303,0.000324,0.000345,0.000364,0.000381,0.000397,0.000412,0.000426,
+ 0.000438,0.000449,0.000459,0.000469,0.000478,0.000487,0.000496,0.000505,0.000515,0.000526,0.000538,0.000551,0.000566,0.000583,0.000601,0.000621,0.000643,0.000667,0.000692,0.000718,0.000746,0.000774,
+ 0.000803,0.000832,0.000861,0.000889,0.000916,0.000943,0.000967,0.000991,0.001013,0.001035
+};
 
 // Spreads
-
-std::vector<double> spreads_data = {
+std::vector<double> spreads = {
         208.5, 187.5, 214, 235, 255, 272, 225, 233, 218, 215, 203, 199, 202, 196.71, 225.92, 219.69, 229.74, 232.12, 223.02, 224.45, 212, 211.51, 206.25, 203.37, 212.94, 211.02, 210.06, 206.23, 211.49, 209.09, 204.3, 204.77,
         199.98, 200.94, 202.38, 205.72, 204.76, 210.02, 209.54, 209.54, 212.41, 213.35, 208.57, 208.56, 220.05, 226.26, 227.2, 222.89, 228.63, 231.5, 247.75, 255.37, 251.07,
         256.33, 252.01, 254.88, 246.98, 238.12, 241.95, 244.33, 252.45, 250.53, 246.71, 256.26, 255.78, 257.19, 247.63, 237.12, 234.73, 226.36, 218, 219.9, 224.68,
@@ -56,84 +54,48 @@ std::vector<double> spreads_data = {
         118.64, 122.71, 124.86, 121.27, 120.79
 };
 
-// CVA Calculation
-double calculate_cva(std::vector<std::vector<double>> &mm_grid, double LGD, std::vector<double> &spot_rates, std::vector<double> &spreads_data, int simN, int timepoints_size, double dtau = 0.5) {
-       std::vector<double> eexposure(timepoints_size, 0.00);
-
-       // calculate expected exposure profile  Average [ Max ( irs[i], 0) ] , n * 51 reductions
-       const double factor = 1.0/(double)simN;
-       for (int t = 0; t < timepoints_size; t++) {
-           double sum = 0.0;
-           for (int sim = 0; sim < simN; sim++) {
-               sum += ( mm_grid[sim][t] > 0) ? mm_grid[sim][t] : 0.0;
-           }
-           eexposure[t] = sum * factor;
-       }
-
-       // Display in the stdout the simulated forward rate
-       //display_curve(eexposure);
-
-       // Generate CVA = LGD * INTEGRAL (EE(t), PD(t), DF(t)) (T0, T) done by lambda Apply Trapezoidal Rule integration
-       TermStructure ee_curve( eexposure );
-       TermStructure spreads( spreads_data );
-       DiscountFactorsTermStructure dcf_curve(spot_rates);
-
-       // CDS bootstrap
-       DefaultProbabilityTermStructure default_prob(timepoints, spreads, dcf_curve, LGD, dtau);
-
-       // integration using trapezoidal curve
-       double cva = CVAPricer(LGD, eexposure, default_prob, dcf_curve).price();
-
-       return cva;
-}
 
 
-int main() { // LGD, PDF, VOL, DRIFTS
+int main() {
+    // Calibration volatitliy & drift calibration using linear least square curve fitting
+    //callibrate_volatilities_hjm(volatilities, drifts, yield_curve_10Y);
 
-    // Calibration
-    //shared_ptr<std::vector<double>> v = std::make_shared<std::vector<double>>(std::initializer_list<double>{ 1, 2, 3, 4, 5 });
-    //std::cout << (*v)[0];
+    const double maturity = 51.0;
 
-    // volatitliy & drift calibration using linear least square curve fitting
-    //callibrate_volatilities(/*yield_curve_matrix, */ volatilities, drifts );
+    // Expected Exposure Profile
+    std::vector<double> expected_exposure(timepoints_size, 0.0);
 
-    // Convert Spreads into 10000 bps
-    std::vector<double> spreads_bps;
-    std::transform(spreads_data.begin(), spreads_data.end(), std::back_inserter(spreads_bps), [](double x) {
-        return 0.0001 * x;
-    });
+    // Discounts
+    YieldCurveTermStructure yieldCurve(spot_rates, tenors, maturity);
 
-    double LGD = 0.40;
-    /*
-    TermStructure spreads( spreads_data );
-    DiscountFactorsTermStructure discountFactors(spot_rates);
-    DefaultProbabilityTermStructure survivalProbabilityCurve(timepoints, spreads, discountFactors, LGD, 0.5);
-    std::vector<double> defaultProbabilityCurve;
-    for (double timepoint : timepoints) {
-        defaultProbabilityCurve.push_back( survivalProbabilityCurve(timepoint) );
-    }
-     */
-
-    // Exposure simulation result Grid
-    std::vector<std::vector<double>> mm_grid(7000, std::vector<double>(timepoints_size, 0.0) );
+    // Survival Probability Bootstrapping
+    double recovery = 0.04;
+    SurvivalProbabilityTermStructure probabilitySurvivalCurve(tenors, spreads, yieldCurve, recovery, maturity);
 
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
     //  TODO - Increase the simulations numbers and analyze convergence and std deviation
-    for (int simN = 500; simN < 7000; simN += 250) {
+    // Expected exposure applied to a portfolio with only one trade IRS EURIBOR 6M 10Y
+    // Forward Rates generated with HJM
+
+    for (int simN = 500; simN < 8000; simN += 250) {
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        mc_engine(mm_grid, simN, timepoints_size, 51.0,spot_rates, volatilities, drifts );
+        mc_engine(expected_exposure, simN, timepoints_size, 51.0 ,spot_rates, volatilities, drifts );
 
         auto finish = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = finish - start;
 
-        double cva = calculate_cva(mm_grid, LGD, spot_rates, spreads_data, simN, timepoints_size);
+        ExpectedExposureTermStructure expectedExposureCurve(timepoints,expected_exposure, maturity);
+
+        double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, probabilitySurvivalCurve, timepoints, 51);
 
         std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << elapsed.count() << std::endl;
     }
+
+    //TODO - mc statistics
 
     exit(0);
 }
