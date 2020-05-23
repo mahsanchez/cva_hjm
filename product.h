@@ -4,7 +4,6 @@
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
-#include <random>
 #include <memory>
 #include <cmath>
 #include <iostream>
@@ -47,7 +46,7 @@ std::vector<double> fixed_schedule = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.
 
 void display_curve(std::vector<double> &curve) {
     std::cout << std::setprecision(6)<< std::fixed;
-    std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, ","));
+    std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
 }
 
@@ -263,7 +262,7 @@ private:
 double calculate_cva(double recovery, YieldCurveTermStructure &yieldCurve, ExpectedExposureTermStructure &expected_exposure, SurvivalProbabilityTermStructure &survprob, std::vector<double> &exposure_points, int maturity, double dtau = 0.5) {
     double cva = 0.0;
 
-    // TODO - USe parallel reduction to sum the value array
+    // TODO - USe parallel reduction to sum the vector array
     for (int i = 1; i < exposure_points.size(); i++) {
         double t = exposure_points[i];
         double t0 = exposure_points[i-1];
