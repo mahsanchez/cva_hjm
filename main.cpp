@@ -1,6 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <iterator>
+#include <random>
+#include <boost/math/special_functions/erf.hpp>
+
+std::random_device rd;
+std::mt19937  mt(rd() );
+std::uniform_real_distribution<double> uniform_distribution(0.0, 1.0);
+std::normal_distribution<double> gaussian_distribution(0.0, 1.0);
 
 //#include "calibration.h"
 #include "simulation.h"
@@ -66,6 +73,14 @@ int main() {
     double recovery = 0.04;
     SurvivalProbabilityTermStructure probabilitySurvivalCurve(tenors, spreads, yieldCurve, recovery, maturity);
 
+    //Gaussian and Error Function Inverse Random Generators
+    auto erfinv = []() {
+        return boost::math::erf_inv(uniform_distribution(mt));
+    };
+    auto gaussian_random = []() {
+        return gaussian_distribution(mt);
+    };
+
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
@@ -77,7 +92,7 @@ int main() {
 
         auto start = std::chrono::high_resolution_clock::now();
 
-        mc_engine(expected_exposure, simN, timepoints_size, 51.0 ,spot_rates, volatilities, drifts );
+        mc_engine(expected_exposure, erfinv, simN, timepoints_size, 51.0 ,spot_rates, volatilities, drifts );
 
         auto finish = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = finish - start;

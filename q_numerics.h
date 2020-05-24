@@ -6,13 +6,6 @@
 #include <cmath>
 #include <algorithm>
 
-//std::random_device rd{};
-//std::mt19937  mt(rd);
-//std::uniform_real_distribution<double> udist(0.0, 1.0);
-//std::uniform_real_distribution<double> uniform_distribution = std::bind(std::uniform_real_distribution<double>(0.0,1.0), std::mt19937(rd));
-//std::normal_distribution<> gaussian_distribution{0.0,1.0};
-
-
 template <typename F>
 float trapezoidal(F f, double a, double b, int n, double h)
 {

@@ -21,20 +21,7 @@ std::vector<double> timepoints = {
         17.0, 17.5, 18.0, 18.5, 19.0, 19.5, 20.0, 20.5, 21.0, 21.5, 22.0, 22.5, 23.0, 23.5, 24.0, 24.5, 25.0
 };
 
-/* Exposure Points
-   daily calculations for 1 week
-   weekly calculations up to 1 month
-   biweekly up to 3 months
-   monthly up to 1 year
-   quarterly up to 5 years ]
-   yearly up to the end time point up to 10Y
-   Y5y Timesteps until 50Y
- */
-/*  Convert days relatives to 30/360 calendar
-    std::transform(exposure_points.begin(), exposure_points.end(), exposure_points.begin(), [](double day) {
-        return day/360;
-    });
-*/
+// Exposure Points
 std::vector<double> exposure_timepoints = {
         1,2,3,4,5, 15, 22, 29, 30, 36, 50, 64, 76, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 780, 900, 1020, 1140, 1260, 1380, 1500, 1720, 1840, 2140, 2520, 2880, 3240, 3600, 4800, 7200
 };
@@ -45,7 +32,7 @@ std::vector<double> fixed_schedule = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.
 
 
 void display_curve(std::vector<double> &curve) {
-    std::cout << std::setprecision(6)<< std::fixed;
+    std::cout << std::setprecision(10)<< std::fixed;
     std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
 }
@@ -53,14 +40,16 @@ void display_curve(std::vector<double> &curve) {
 // TODO - Review Discount and Forward Rates
 class YieldCurveTermStructure {
 public:
-    YieldCurveTermStructure(std::vector<double>& rates, std::vector<double>& tenors, int maturity) {
+    YieldCurveTermStructure(std::vector<double>& rates, std::vector<double>& tenors, int maturity, double dtau_ = 0.5, double dt_ = 0.01) {
+        dtau = dtau_;
+        dt = dt_;
         interpolator.initialize(tenors, rates);
     }
 
     // discount factor at time t2 as seem from time t1
-    double discount(double t1, double t2, double dt = 0.5) {
+    double discount(double t1, double t2) {
         double r = 0.0;
-        for (double x = t1; x <= t2; x+= dt) {
+        for (double x = t1; x <= t2; x+= dtau) {
             r += interpolator.find(x);
         }
         double result = std::exp(-r * dt);
@@ -86,6 +75,8 @@ public:
      */
 
 private:
+    double dtau;
+    double dt;
     linear_interpolator interpolator;
 };
 
@@ -107,7 +98,7 @@ public:
         for (int i = initial_cashflow; i < floating_schedule.size(); i++) {
             double t2 = floating_schedule[i];
             double t1 = floating_schedule[i-1];
-            result += t2 * yieldCurve.forward_rate(t1, t2, t2 - t1) * yieldCurve.discount(t, t2, 0.5) ;
+            result += t2 * yieldCurve.forward_rate(t1, t2, t2 - t1) * yieldCurve.discount(t, t2) ;
             //std::cout << "cash_flow " << i << " forward_rate " << yieldCurve.forward_rate(t1, t2, t2-t1) << " discount factor: " << yieldCurve.discount(t, t2, 0.5) << std::endl;
         }
         return result;
@@ -117,7 +108,7 @@ public:
         double result = 0.0;
         for (int i = initial_cashflow; i < fixed_schedule.size(); i++) {
             double t2 = fixed_schedule[i];
-            result += t2 * yieldCurve.discount(t, t2, 1.0) ;
+            result += t2 * yieldCurve.discount(t, t2) ;
         }
         result *= K;
         return result;
@@ -152,12 +143,11 @@ private:
 */
 class InterestRateSwapExposureEngine {
 public:
-    InterestRateSwapExposureEngine(std::vector<double>& _exposures, std::vector<std::vector<double>>& _forward_rates, std::vector<double> timepoints_, double notional_, double K_, double maturity_, double dtau_, double dt_) :
-    exposures(_exposures), forward_rates(_forward_rates), timepoints(timepoints_), notional(notional_), K(K_), maturity(maturity_), dtau(dtau_), dt(dt_){
-        calculate();
+    InterestRateSwapExposureEngine(std::vector<std::vector<double>>& _forward_rates, std::vector<double>& timepoints_, double notional_, double K_, double maturity_, double dtau_, double dt_) :
+    forward_rates(_forward_rates), timepoints(timepoints_), notional(notional_), K(K_), maturity(maturity_), dtau(dtau_), dt(dt_) {
     }
 
-    void calculate() {
+    void calculate(std::vector<double>& exposures) {
         int maturity = 51;
         for (int cashflow = 1; cashflow < maturity; cashflow++) {
             int t = timepoints[cashflow]/dt;
@@ -173,8 +163,7 @@ private:
     double maturity;
     double dtau;
     double dt;
-    std::vector<double> timepoints;
-    std::vector<double>& exposures;
+    std::vector<double>& timepoints;
     std::vector<std::vector<double>>& forward_rates;
 };
 
