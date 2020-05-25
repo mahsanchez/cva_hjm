@@ -37,88 +37,150 @@ void display_curve(std::vector<double> &curve) {
     std::cout << std::endl;
 }
 
-// TODO - Review Discount and Forward Rates
-class YieldCurveTermStructure {
+/*
+ * reference day for a discount factor over the spot rate is today
+ */
+class SpotRateYieldCurveTermStructure {
 public:
-    YieldCurveTermStructure(std::vector<double>& rates, std::vector<double>& tenors, int maturity, double dtau_ = 0.5, double dt_ = 0.01) {
-        dtau = dtau_;
-        dt = dt_;
-        interpolator.initialize(tenors, rates);
+    SpotRateYieldCurveTermStructure(std::vector<double>& rates, double expiry, double dtau = 0.5) {
+        // Build Discount Curve
+        bootstrapDiscountFactorsCurve(rates, expiry, dtau);
     }
 
     // discount factor at time t2 as seem from time t1
-    double discount(double t1, double t2) {
-        double r = 0.0;
-        for (double x = t1; x <= t2; x+= dtau) {
-            r += interpolator.find(x);
+    double discount(double t) {
+        double df = discountCurve.find(t);
+        return df;
+    }
+
+    void bootstrapDiscountFactorsCurve(std::vector<double>& rates, double expiry, double dtau = 0.5) {
+        double tenor = 0.0;
+        double tenor_size = expiry/dtau;
+
+        for (int i = 0; i < tenor_size; i++) {
+            double discount = std::exp(-rates[i] * dtau);
+            discountCurve.add(tenor, discount);
+            tenor += dtau;
         }
-        double result = std::exp(-r * dt);
-        return result;
+    }
+
+private:
+    linear_interpolator discountCurve;
+};
+
+
+class HJMYieldCurveTermStructure {
+public:
+    HJMYieldCurveTermStructure(std::vector<std::vector<double>>& fwds, std::vector<double>& tenors, double reference_day, double expiry, double dt_, double dtau_ = 0.5) {
+        dtau = dtau_;
+        dt = dt_;
+        // Build Forward Rate
+        bootstrapForwardCurve(fwds, reference_day, expiry, dt, dtau);
+        // Build Discount Curve
+        bootstrapDiscountFactorsCurve(fwds, reference_day, expiry, dt, dtau);
+    }
+
+    // discount factor at time t2 as seem from time t1
+    double discount(double t) {
+        double df = discountCurve.find(t);
+        return df;
+    }
+
+    // discount factor at time t2 as seem from time t1
+    double forward(double t, double t2) {
+        double df = forwardCurve.find(t);
+        return df;
     }
 
     // Compute Forward Rate as L(t; 0.5, 1) = 1/CplTau*(EXP(MC!Caplet!C62*CplTau)-1)
     // L=m(e^(f/m)- 1), where m is compounding frequency per year  m = 1/0.5
-    double forward_rate(double t1, double t2, double dtau) {
-        double r = 1.0/dtau*(std::exp( interpolator.find(t1) *dtau)-1.0);
-        return r;
+    void bootstrapForwardCurve(std::vector<std::vector<double>>& fwdGrid, double reference_day, double expiry, double dt, double dtau) {
+        int simulation = reference_day/dt;
+        int tenor_size = expiry/dtau;
+        double tenor = 0.0;
+
+        for (int i = 0; i < tenor_size; ++i) {
+            double r = fwdGrid[simulation][i];
+            double libor = 1.0/dtau*(std::exp(r*dtau)-1.0);
+            forwardCurve.add(tenor, libor);
+            tenor += dtau;
+        }
     }
 
     /*
-    double forward_rate(double t1, double t2, double dtau) {
-        double r = 0.0;
-        for (double t = t1; t <= t2; t += dtau) {
-            r += points[t];
-        }
-        double result =  r / (t2/dtau + 1.0) ;
-        return result;
-    }
+     * column to find the tenor related with the start day [ as seen from today [0], as seen in 6 months [0.5]  and so on
+     * Entire row from fwdGrid begin to end; but only sum on tenors interested points tenor mod 50  dtau/dt
      */
+    void bootstrapDiscountFactorsCurve(std::vector<std::vector<double>>& fwdGrid, double reference_day, double expiry, double dt, double dtau) {
+        int tenor = reference_day/dtau; //
+        int tenor_size = expiry/dtau;
+
+        std::vector<double> accumul_rates(tenor_size, 0.0);
+        accumul_rates[0] = 1.0;
+
+        int begin = 0;
+        int leap = dtau/dt;
+        int end = leap;
+
+        for (int i = 1; i < accumul_rates.size(); i++) {
+            double sum = 0.0;
+            for (int sim = 0; sim < end; sim++) {
+                sum += fwdGrid[sim][tenor];
+            }
+            accumul_rates[i] = std::exp(-sum * dt);
+            end += leap;
+        }
+
+        double t = 0.0;
+        for (int i = 0; i < tenor_size; i++) {
+            discountCurve.add(t, accumul_rates[i]);
+            t += dtau;
+        }
+    }
 
 private:
+
     double dtau;
     double dt;
-    linear_interpolator interpolator;
+    linear_interpolator forwardCurve;
+    linear_interpolator discountCurve;
 };
 
 
 /*
  * VainillaInterestRateSwap
+ * Valuation = Sum[0..T] (S - K) *  𝛼j * DF(t0, tj)
+ *
+ * 􏰷 𝛼j is the day-count fraction over which the coupon accrues.
+􏰷 * B(t0 , tj ) is the value (at t0 ) of a discount factor maturing at time tj .
+􏰷 * K is the fixed rate of the swap.
+ * 􏰷S is the par swap rate where
+ *
+􏰷 The fixed and floating leg frequencies and day count bases are assumed to be the same for simplicity.
  */
 
 class VanillaInterestRateSwap {
 public:
-    VanillaInterestRateSwap(double _notional, int initial_cashflow_, double t_, double _K, std::vector<double>& _floating_schedule, std::vector<double>& _fixed_schedule,  YieldCurveTermStructure & _yieldCurve) :
-    notional(_notional), initial_cashflow(initial_cashflow_), K(_K), t(t_), floating_schedule(_floating_schedule), fixed_schedule(_fixed_schedule), yieldCurve(_yieldCurve)
+    VanillaInterestRateSwap(double _notional, int initial_cashflow_, double reference_day_, double _K, std::vector<double>& cashflow_schedule_,  HJMYieldCurveTermStructure & _yieldCurve) :
+    notional(_notional), initial_cashflow(initial_cashflow_), K(_K), reference_day(reference_day_), cashflow_schedule(cashflow_schedule_), yieldCurve(_yieldCurve)
     {
           calculate();
     };
 
-    double floatingLeg() {
-        double result = 0.0;
-        for (int i = initial_cashflow; i < floating_schedule.size(); i++) {
-            double t2 = floating_schedule[i];
-            double t1 = floating_schedule[i-1];
-            result += t2 * yieldCurve.forward_rate(t1, t2, t2 - t1) * yieldCurve.discount(t, t2) ;
+    void calculate() {
+        double price = 0;
+
+        for (int i = initial_cashflow; i < cashflow_schedule.size(); i++) {
+            double sum = 0.0;
+            double t2 = cashflow_schedule[i];
+            double t1 = cashflow_schedule[i-1];
+            sum = yieldCurve.forward(t1, t2) - K;
+            sum *= t2;
+            sum *= yieldCurve.discount(t2);
+            price += sum;
             //std::cout << "cash_flow " << i << " forward_rate " << yieldCurve.forward_rate(t1, t2, t2-t1) << " discount factor: " << yieldCurve.discount(t, t2, 0.5) << std::endl;
         }
-        return result;
-    }
-
-    double fixedLeg() {
-        double result = 0.0;
-        for (int i = initial_cashflow; i < fixed_schedule.size(); i++) {
-            double t2 = fixed_schedule[i];
-            result += t2 * yieldCurve.discount(t, t2) ;
-        }
-        result *= K;
-        return result;
-    }
-
-    void calculate() {
-        floating_leg = floatingLeg() ;
-        fixed_leg = fixedLeg();
-        npv = floating_leg - fixed_leg;
-        npv *= notional;
+        npv = notional * price;
     }
 
     double price() {
@@ -128,39 +190,36 @@ public:
 private:
     int initial_cashflow;
     double notional;
-    double t;
+    double reference_day;
     double K;
-    double floating_leg;
-    double fixed_leg;
     double npv = 0.0;
-    std::vector<double>& floating_schedule;
-    std::vector<double>& fixed_schedule;
-    YieldCurveTermStructure &yieldCurve;
+    std::vector<double>& cashflow_schedule;
+    HJMYieldCurveTermStructure &yieldCurve;
 };
 
 /*
- * IRS Mark to Marking
+ * Interest Rate Swap Mark to Market
+ * Exposure points are on top of tenors for simplicity
 */
 class InterestRateSwapExposureEngine {
 public:
-    InterestRateSwapExposureEngine(std::vector<std::vector<double>>& _forward_rates, std::vector<double>& timepoints_, double notional_, double K_, double maturity_, double dtau_, double dt_) :
-    forward_rates(_forward_rates), timepoints(timepoints_), notional(notional_), K(K_), maturity(maturity_), dtau(dtau_), dt(dt_) {
+    InterestRateSwapExposureEngine(std::vector<std::vector<double>>& _forward_rates, std::vector<double>& timepoints_, double notional_, double K_, double expiry_, double dtau_, double dt_) :
+    forward_rates(_forward_rates), timepoints(timepoints_), notional(notional_), K(K_), expiry(expiry_), dtau(dtau_), dt(dt_) {
     }
 
     void calculate(std::vector<double>& exposures) {
-        int maturity = 51;
-        for (int cashflow = 1; cashflow < maturity; cashflow++) {
-            int t = timepoints[cashflow]/dt;
-            YieldCurveTermStructure yieldCurve(forward_rates[t], timepoints, maturity);
-            VanillaInterestRateSwap irs(notional, cashflow, timepoints[cashflow], K, floating_schedule, fixed_schedule, yieldCurve);
-            exposures[cashflow] = irs.price();
+        for (int t = 1; t < timepoints.size() - 1; t++) { // loop until expiry
+            double reference_day = timepoints[t];
+            HJMYieldCurveTermStructure yieldCurve(forward_rates, timepoints, reference_day, expiry, dt, dtau);
+            VanillaInterestRateSwap irs(notional, t, reference_day, K, floating_schedule, yieldCurve);
+            exposures[t] = irs.price();
         }
     }
 
 private:
     double notional; // notional
     double K; // fixed rates IRS
-    double maturity;
+    double expiry;
     double dtau;
     double dt;
     std::vector<double>& timepoints;
@@ -175,7 +234,7 @@ private:
 
 class SurvivalProbabilityTermStructure {
 public:
-    SurvivalProbabilityTermStructure(std::vector<double>& timepoints, std::vector<double>& spreads, YieldCurveTermStructure& yieldCurve, double recovery, int maturity) : interpolator()
+    SurvivalProbabilityTermStructure(std::vector<double>& timepoints, std::vector<double>& spreads, SpotRateYieldCurveTermStructure& yieldCurve, double recovery, int maturity) : interpolator()
     {
         std::vector<double> probabilities(timepoints.size(), 0.0);
         bootstrap(probabilities, timepoints, spreads, yieldCurve, recovery, maturity);
@@ -186,7 +245,7 @@ public:
         return interpolator.find(timepoint);
     }
 
-    void bootstrap(std::vector<double>& p, std::vector<double>& timepoints, std::vector<double>& spreads, YieldCurveTermStructure& yieldCurve, double recovery, int maturity) {
+    void bootstrap(std::vector<double>& p, std::vector<double>& timepoints, std::vector<double>& spreads, SpotRateYieldCurveTermStructure& yieldCurve, double recovery, int maturity) {
         double loss = 1 - recovery;
         double term, terms, divider, term1, term2;
 
@@ -207,13 +266,13 @@ public:
                     double dtau = timepoints[j] - timepoints[j-1];
                     term = loss * p[j-1];
                     term -= (loss + dtau * spreads[i]) * p[j];
-                    term *= yieldCurve.discount(0.0, timepoints[j]);
+                    term *= yieldCurve.discount(timepoints[j]);
                     terms += term;
                 }
 
                 double dtau = timepoints[i] - timepoints[i-1];
                 divider = loss + dtau * spreads[i];
-                divider *= yieldCurve.discount(0.0, timepoints[i]);
+                divider *= yieldCurve.discount(timepoints[i]);
                 term1 = terms/divider;
                 term2 = p[i-1] * loss;
                 term2 /= (loss + dtau * spreads[i]);
@@ -248,14 +307,13 @@ private:
  * CVA Calculation
  * CVA =  E [ (1 - R) [ DF[t] * EE[t] * dPD[t] ] ]
  */
-double calculate_cva(double recovery, YieldCurveTermStructure &yieldCurve, ExpectedExposureTermStructure &expected_exposure, SurvivalProbabilityTermStructure &survprob, std::vector<double> &exposure_points, int maturity, double dtau = 0.5) {
+double calculate_cva(double recovery, SpotRateYieldCurveTermStructure &yieldCurve, ExpectedExposureTermStructure &expected_exposure, SurvivalProbabilityTermStructure &survprob, std::vector<double> &exposure_points, int maturity, double dtau = 0.5) {
     double cva = 0.0;
 
-    // TODO - USe parallel reduction to sum the vector array
     for (int i = 1; i < exposure_points.size(); i++) {
         double t = exposure_points[i];
         double t0 = exposure_points[i-1];
-        cva += yieldCurve.discount(0.0, t) * expected_exposure(t) * (survprob(t0) - survprob(t) ) ;
+        cva += yieldCurve.discount(t) * expected_exposure(t) * (survprob(t0) - survprob(t) ) ;
     }
 
     cva = cva * (1 - recovery) ;

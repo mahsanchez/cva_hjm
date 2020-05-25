@@ -41,6 +41,15 @@ public:
          return find(x);
     }
 
+    void add(double x, double value) {
+        points.push_back( {x, value} );
+    }
+
+    std::vector<std::pair<double, double>>& getPoints() {
+        std::vector<std::pair<double, double>> &result = points;
+        return points;
+    }
+
     double find(double x) const {
         if (points.size() == 0) {
             return 0.0;
