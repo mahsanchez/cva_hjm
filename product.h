@@ -105,14 +105,13 @@ public:
         return df;
     }
 
-    // discount factor at time t2 as seem from time t1
+    // Forward Libor Rate as  factor at time t2 as seem L(t; t1, t2)
     double forward(double t, double t2) {
         double df = forwardCurve.find(t);
         return df;
     }
 
-    // Compute Forward Rate as L(t; 0.5, 1) = 1/CplTau*(EXP(MC!Caplet!C62*CplTau)-1)
-    // L=m(e^(f/m)- 1), where m is compounding frequency per year  m = 1/0.5
+    // Compute Forward LIBOR as L(t; t, T) At Fixed Tenors L=m(e^(f/m)- 1), where m is compounding frequency per year  m = 1/0.5
     void bootstrapForwardCurve(std::vector<std::vector<double>>& fwdGrid, double reference_day, double expiry, double dt, double dtau) {
         int simulation = reference_day/dt;
         int tenor_size = expiry/dtau;

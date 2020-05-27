@@ -4,11 +4,6 @@
 #include <random>
 #include <boost/math/special_functions/erf.hpp>
 
-std::random_device rd;
-std::mt19937  mt(rd() );
-std::uniform_real_distribution<double> uniform_distribution(0.0, 1.0);
-std::normal_distribution<double> gaussian_distribution(0.0, 1.0);
-
 //#include "calibration.h"
 #include "simulation.h"
 
@@ -113,21 +108,72 @@ struct interest_rate_swap {
     double expiry;
 };
 
+/*
+ * Gaussian Random Number generators
+ */
+std::random_device rd;
+std::mt19937  mt(rd() );
+std::uniform_real_distribution<double> uniform_distribution(0.0, 1.0);
+std::normal_distribution<double> gaussian_distribution(0.0, 1.0);
 
-//Main Entry Point
+//Error Function Inverse over uniform distributed numbers to generate Gaussian Random Generators
+auto erfinv = [](double *phi_random, int count) {
+    for (int i = 0; i < count; i++) {
+        phi_random[i] = boost::math::erf_inv(uniform_distribution(mt));
+    }
+};
+
+// Gaussian generator using C++ STL normal_distribution
+auto gaussian_random = [](double *phi_random, int count) {
+    for (int i = 0; i < count; i++) {
+        phi_random[i] = gaussian_distribution(mt);
+    }
+};
+
+/*
+ *  Reduction to produce the expected exposure profile EE[t] curve for the IRS
+ * Expected Exposure  EPE(t) = 𝔼 [max(V , 0)|Ft]
+*/
+void reduce(std::vector<double>& expected_exposure, std::vector<std::vector<double>>& exposures, int timepoints_size, int simN) {
+    for (int t = 0; t < timepoints_size; t++) {
+        double sum = 0.0;
+        for (int i = 0; i < simN; i++) {
+            sum += std::max(exposures[i][t], 0.0);
+        }
+        expected_exposure[t] = sum /(double)simN;
+    }
+}
+
+/*
+ * Risk Factor Simulation Grid Matrix MAX_SIM x MAX_TENOR double array
+ */
+const int MAX_SIM = 10000;
+const int MAX_TENOR = 51;
+const double MAX_EXPIRY = 10.0;
+const double DTAU = 0.5;
+
+// Generate a grid of tenor_size x simN contains the risk factors Forward Rates F(t, T1, T2) from 0 .. T (expiry)
+std::vector<std::vector<double>> fwd_rates(MAX_SIM, std::vector<double>(MAX_TENOR, 0.0));
+
+// Generate one Exposure Profile by Simulation Step
+std::vector<std::vector<double>> exposures(MAX_SIM, std::vector<double>(MAX_EXPIRY/DTAU, 0.0));
+
+/*
+ * Main Entry Point
 // Initialize input parameters and trigger the mc_simulation to generate the averaged EE[t] for the IRS
 // CVA is calculated using parameters PdF(t), DF(t) & EE(t)
 // Expected exposure applied to a portfolio with only one trade IRS EURIBOR 6M 10Y
 // Risk Factor Forward Rates F(t; t1, t2) is generated with HJM mdel
+ */
 
 int main() {
-    // Calibration volatitliy & drift calibration using linear least square curve fitting
-    //callibrate_volatilities_hjm(volatilities, drifts, yield_curve_10Y);
     const int tenors_size = 51;
-    const double expiry = 10.0;
+    const double expiry = MAX_EXPIRY;
     const double dtau = 0.5;
-    const int MAX_SIM = 8000;
     const int dimension = 3;
+
+    // Calibration volatitliy & drift calibration using linear least square curve fitting
+    //callibrate_volatilities_hjm(volatilities, drifts, yield_curve_EURIBOR_6M_10Y);
 
     // Discounts  or Zero Coupon Bond bootstrapped from the Spot Rates
     SpotRateYieldCurveTermStructure yieldCurve(spot_rates, expiry, dtau);
@@ -138,21 +184,11 @@ int main() {
     // Survival Probability Bootstrapping
     SurvivalProbabilityTermStructure probabilitySurvivalCurve(tenors, spreads, yieldCurve, recovery, tenor_size); // dtau
 
-    //Error Function Inverse over uniform distributed numbers to generate Gaussian Random Generators
-    auto erfinv = []() {
-        return boost::math::erf_inv(uniform_distribution(mt));
-    };
-
-    // Gaussian generator using C++ STL normal_distribution
-    auto gaussian_random = []() {
-        return gaussian_distribution(mt);
-    };
+    // Total Number of simulation points
+    int simulation_points = expiry/dtau;
 
     // Expected Exposure Profile
-    std::vector<double> expected_exposure(expiry/dtau, 0.0);
-
-    // Generate a grid of tenor_size x simN contains the risk factors Forward Rates F(t, T1, T2) from 0 .. T (expiry)
-    std::vector<std::vector<double>> fwd_rates(MAX_SIM, std::vector<double>(tenors_size, 0.0));
+    std::vector<double> expected_exposure(simulation_points, 0.0);
 
     // copy the spot rates as the first curve inside fwd_rates
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
@@ -160,27 +196,37 @@ int main() {
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
-    //  TODO - Increase the simulations numbers and analyze convergence and std deviation
-    for (int simN = 500; simN < 8000; simN += 250) {
+    //  Increase the simulations numbers and analyze convergence and std deviation
+    for (int simN = 500; simN < MAX_SIM; simN += 250) {
         // simulation step size
         double dt = expiry/simN;
+        double duration = 0.0;
 
         // HJM Stochastic SDE Definition
         hjm_sde sde(drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 51.0);
 
-        auto start = std::chrono::high_resolution_clock::now();
+        // Simulate all the possible  Exposure Profiles for a portfolio with an an Interest Rate Swap Instrument
+        mc_engine(exposures, erfinv, sde, simN, expiry, dtau, duration); //interest_rate_swap
 
-        // Calculate the Expected Positive Exposure for an Interest Rate Swap Instrument
-        mc_engine(expected_exposure, erfinv, sde, simN, expiry, dtau ); //interest_rate_swap
+        // Calculate Statistics max, median, quartiles, 97.5th percentile on exposures
+        // Calculate Potential Future Exposure (PFE) at the 97.5th percentile and media of the Positive EE
 
-        auto finish = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed = finish - start;
+        // Calculate Expected Exposure (EE)  EPE(t) = 𝔼 [max(V , 0)|Ft]
+        // Use reduction to generate across timepoints the expected exposure profile for the IRS
+        reduce(expected_exposure, exposures, simulation_points, simN);
 
+        // Report Expected Exposure Profile Curve
+        display_curve(expected_exposure);
+
+        // Calculate The Unilateral CVA - Credit Value Adjustment Metrics Calculation.
+        // For two conterparties A - B. Counterparty A want to know how much is loss in a contract due to B defaulting
         ExpectedExposureTermStructure expectedExposureCurve(pricing_points,expected_exposure, expiry);
-
         double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, probabilitySurvivalCurve, pricing_points, expiry);
 
-        std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << elapsed.count() << std::endl;
+        std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << duration << std::endl;
+
+        // Compare the exposures at maximum with percentiles consider
+        // Sensitivity Analysis considering the very small and negative rates
     }
 
     exit(0);
