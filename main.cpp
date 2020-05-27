@@ -14,7 +14,6 @@ std::normal_distribution<double> gaussian_distribution(0.0, 1.0);
 
 using namespace std;
 
-const int timepoints_size = 51;
 const int tenor_size = 51;
 
 // First row is the last observed forward curve (BOE data)  //  3-dimensional Normal random vector in columns BC, BD, BE (on far right)
@@ -59,48 +58,58 @@ std::vector<double> spreads = {
 /*
  * (Musiela Parameterisation HJM) We simulate f(t+dt)=f(t) + dfbar  where SDE dfbar =  m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt  and phi ~ N(0,1)
  */
-auto musiela_sde = [](double *gaussian_rand, double* vol, double drift, double *fwd_rates, const int t, const int last_tenor, const int dimension, const double dt, double dtau) {
-    double dfbar = 0.0;
-
-    // calculate diffusion term SUM(Vol_i*phi*SQRT(dt))
-    for (int i = 0; i < dimension; i++) {
-        dfbar +=  vol[i] * gaussian_rand[i];
-    }
-    dfbar *= std::sqrt(dt);
-
-    // calculate the drift
-    dfbar += drift * dt;
-
-    // apply the adjustment
-    double dF = 0.0;
-    if (t < (last_tenor - 1)) {
-        dF += fwd_rates[t+1] - fwd_rates[t];
-    }
-    else {
-        dF += fwd_rates[t] - fwd_rates[t-1];
-    }
-    dfbar += (dF/dtau) * dt;
-
-    // apply Euler Maruyana
-    dfbar = fwd_rates[t] + dfbar;
-
-    return dfbar;
-};
-
-
-// RiskFactor MC Simulation Context information
-struct simulation_context {
-    std::vector<double> &spot_rates;
-    std::vector<std::vector<double>>& volatilities;
+struct hjm_sde {
     std::vector<double> &drifts;
+    std::vector<std::vector<double>>& volatilities;
+    std::vector<std::vector<double>>& fwd_rates;
+    int dimension;
+    double dt;
+    double dtau;
+    int tenors_size;
+    double expiry;
+
+    hjm_sde(std::vector<double> &drifts_, std::vector<std::vector<double>>& volatilities_, std::vector<std::vector<double>>& fwd_rates_, int dimension_, double dt_, double dtau_, int tenors_size_, double expiry_) :
+        drifts(drifts_), volatilities(volatilities_), fwd_rates(fwd_rates_), dimension(dimension_), dt(dt_), dtau(dtau_), tenors_size(tenors_size_), expiry(expiry_) {
+
+    }
+
+    inline void evolve(int sim, int tenor, double *gaussian_rand) {
+        double dfbar = 0.0;
+
+        // calculate diffusion term SUM(Vol_i*phi*SQRT(dt))
+        for (int i = 0; i < dimension; i++) {
+            dfbar +=  volatilities[i][tenor] * gaussian_rand[i];
+        }
+        dfbar *= std::sqrt(dt);
+
+        // calculate the drift m(t)*dt
+        dfbar += drifts[tenor] * dt;
+
+        // calculate dF/dtau*dt
+        double dF = 0.0;
+        if (tenor < (tenor_size - 1)) {
+            dF += fwd_rates[sim-1][tenor+1] - fwd_rates[sim-1][tenor];
+        }
+        else {
+            dF += fwd_rates[sim-1][tenor] - fwd_rates[sim-1][tenor-1];
+        }
+        dfbar += (dF/dtau) * dt;
+
+        // apply Euler Maruyana
+        dfbar = fwd_rates[sim-1][tenor] + dfbar;
+
+        fwd_rates[sim][tenor] = dfbar;
+    }
 };
 
-// Pricing Instrument IRS
+/*
+ * Pricing Instrument IRS
+ */
 struct interest_rate_swap {
-    std::vector<double> &floating_schedule;
-    std::vector<double> &fix_schedule;
+    std::vector<double> &cashflow_schedule;
     double notional;
     double K;
+    double dtau;
     double expiry;
 };
 
@@ -114,12 +123,11 @@ struct interest_rate_swap {
 int main() {
     // Calibration volatitliy & drift calibration using linear least square curve fitting
     //callibrate_volatilities_hjm(volatilities, drifts, yield_curve_10Y);
-    const int timepoints_size = 51;
-    const double expiry = 25.0;
+    const int tenors_size = 51;
+    const double expiry = 10.0;
     const double dtau = 0.5;
-
-    // Expected Exposure Profile
-    std::vector<double> expected_exposure(timepoints_size, 0.0);
+    const int MAX_SIM = 8000;
+    const int dimension = 3;
 
     // Discounts  or Zero Coupon Bond bootstrapped from the Spot Rates
     SpotRateYieldCurveTermStructure yieldCurve(spot_rates, expiry, dtau);
@@ -128,7 +136,7 @@ int main() {
     double recovery = 0.04;
 
     // Survival Probability Bootstrapping
-    SurvivalProbabilityTermStructure probabilitySurvivalCurve(tenors, spreads, yieldCurve, recovery, expiry);
+    SurvivalProbabilityTermStructure probabilitySurvivalCurve(tenors, spreads, yieldCurve, recovery, tenor_size); // dtau
 
     //Error Function Inverse over uniform distributed numbers to generate Gaussian Random Generators
     auto erfinv = []() {
@@ -140,28 +148,40 @@ int main() {
         return gaussian_distribution(mt);
     };
 
+    // Expected Exposure Profile
+    std::vector<double> expected_exposure(expiry/dtau, 0.0);
+
+    // Generate a grid of tenor_size x simN contains the risk factors Forward Rates F(t, T1, T2) from 0 .. T (expiry)
+    std::vector<std::vector<double>> fwd_rates(MAX_SIM, std::vector<double>(tenors_size, 0.0));
+
+    // copy the spot rates as the first curve inside fwd_rates
+    std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
+
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
     //  TODO - Increase the simulations numbers and analyze convergence and std deviation
     for (int simN = 500; simN < 8000; simN += 250) {
+        // simulation step size
+        double dt = expiry/simN;
+
+        // HJM Stochastic SDE Definition
+        hjm_sde sde(drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 51.0);
 
         auto start = std::chrono::high_resolution_clock::now();
 
         // Calculate the Expected Positive Exposure for an Interest Rate Swap Instrument
-        mc_engine(expected_exposure, erfinv, simN, timepoints_size, spot_rates, volatilities, drifts, expiry ); //  musiela_sde, interest_rate_swap
+        mc_engine(expected_exposure, erfinv, sde, simN, expiry, dtau ); //interest_rate_swap
 
         auto finish = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsed = finish - start;
 
-        ExpectedExposureTermStructure expectedExposureCurve(timepoints,expected_exposure, expiry);
+        ExpectedExposureTermStructure expectedExposureCurve(pricing_points,expected_exposure, expiry);
 
-        double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, probabilitySurvivalCurve, timepoints, expiry);
+        double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, probabilitySurvivalCurve, pricing_points, expiry);
 
         std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << elapsed.count() << std::endl;
     }
-
-    //TODO - mc statistics
 
     exit(0);
 }
