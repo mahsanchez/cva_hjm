@@ -142,3 +142,93 @@ int test()
     std::copy(a, a + 8, std::ostream_iterator<int>(std::cout, " "));
 }
  * */
+
+/**
+ * CUDA binary search to lower, upper found on linear interpolation
+ * #include <iostream>
+#include <climits>
+#include <assert.h>
+
+__device__  __host__
+int midpoint(int a, int b)
+{
+    return a + (b-a)/2;
+}
+
+__device__ __host__
+int eval(int A[], int i, int val, int imin, int imax)
+{
+
+    int low = (A[i] <= val);
+    int high = (A[i+1] > val);
+
+    if (low && high) {
+        return 0;
+    } else if (low) {
+        return -1;
+    } else {
+        return 1;
+    }
+}
+
+__device__ __host__
+int binary_search(int A[], int val, int imin, int imax)
+{
+    while (imax >= imin) {
+        int imid = midpoint(imin, imax);
+        int e = eval(A, imid, val, imin, imax);
+        if(e == 0) {
+            return imid;
+        } else if (e < 0) {
+            imin = imid;
+        } else {
+            imax = imid;
+        }
+    }
+
+    return -1;
+}
+
+
+__device__ __host__
+int linear_search(int A[], int val, int imin, int imax)
+{
+    int res = -1;
+    for(int i=imin; i<(imax-1); i++) {
+        if (A[i+1] > val) {
+            res = i;
+            break;
+        }
+    }
+
+    return res;
+}
+
+template<int version>
+__global__
+void search(int * source, int * result, int Nin, int Nout)
+{
+    extern __shared__ int buff[];
+    int tid = threadIdx.x + blockIdx.x*blockDim.x;
+
+    int val = INT_MAX;
+    if (tid < Nin) val = source[threadIdx.x];
+    buff[threadIdx.x] = val;
+    __syncthreads();
+
+    int res;
+    switch(version) {
+
+        case 0:
+        res = binary_search(buff, threadIdx.x, 0, blockDim.x);
+        break;
+
+        case 1:
+        res = linear_search(buff, threadIdx.x, 0, blockDim.x);
+        break;
+    }
+
+    if (tid < Nout) result[tid] = res;
+}
+
+**/

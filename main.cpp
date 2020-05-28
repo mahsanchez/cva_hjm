@@ -1,8 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <iterator>
-#include <random>
-#include <boost/math/special_functions/erf.hpp>
 
 //#include "calibration.h"
 #include "simulation.h"
@@ -50,85 +48,7 @@ std::vector<double> spreads = {
 };
 
 
-/*
- * (Musiela Parameterisation HJM) We simulate f(t+dt)=f(t) + dfbar  where SDE dfbar =  m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt  and phi ~ N(0,1)
- */
-struct hjm_sde {
-    std::vector<double> &drifts;
-    std::vector<std::vector<double>>& volatilities;
-    std::vector<std::vector<double>>& fwd_rates;
-    int dimension;
-    double dt;
-    double dtau;
-    int tenors_size;
-    double expiry;
 
-    hjm_sde(std::vector<double> &drifts_, std::vector<std::vector<double>>& volatilities_, std::vector<std::vector<double>>& fwd_rates_, int dimension_, double dt_, double dtau_, int tenors_size_, double expiry_) :
-        drifts(drifts_), volatilities(volatilities_), fwd_rates(fwd_rates_), dimension(dimension_), dt(dt_), dtau(dtau_), tenors_size(tenors_size_), expiry(expiry_) {
-
-    }
-
-    inline void evolve(int sim, int tenor, double *gaussian_rand) {
-        double dfbar = 0.0;
-
-        // calculate diffusion term SUM(Vol_i*phi*SQRT(dt))
-        for (int i = 0; i < dimension; i++) {
-            dfbar +=  volatilities[i][tenor] * gaussian_rand[i];
-        }
-        dfbar *= std::sqrt(dt);
-
-        // calculate the drift m(t)*dt
-        dfbar += drifts[tenor] * dt;
-
-        // calculate dF/dtau*dt
-        double dF = 0.0;
-        if (tenor < (tenor_size - 1)) {
-            dF += fwd_rates[sim-1][tenor+1] - fwd_rates[sim-1][tenor];
-        }
-        else {
-            dF += fwd_rates[sim-1][tenor] - fwd_rates[sim-1][tenor-1];
-        }
-        dfbar += (dF/dtau) * dt;
-
-        // apply Euler Maruyana
-        dfbar = fwd_rates[sim-1][tenor] + dfbar;
-
-        fwd_rates[sim][tenor] = dfbar;
-    }
-};
-
-/*
- * Pricing Instrument IRS
- */
-struct interest_rate_swap {
-    std::vector<double> &cashflow_schedule;
-    double notional;
-    double K;
-    double dtau;
-    double expiry;
-};
-
-/*
- * Gaussian Random Number generators
- */
-std::random_device rd;
-std::mt19937  mt(rd() );
-std::uniform_real_distribution<double> uniform_distribution(0.0, 1.0);
-std::normal_distribution<double> gaussian_distribution(0.0, 1.0);
-
-//Error Function Inverse over uniform distributed numbers to generate Gaussian Random Generators
-auto erfinv = [](double *phi_random, int count) {
-    for (int i = 0; i < count; i++) {
-        phi_random[i] = boost::math::erf_inv(uniform_distribution(mt));
-    }
-};
-
-// Gaussian generator using C++ STL normal_distribution
-auto gaussian_random = [](double *phi_random, int count) {
-    for (int i = 0; i < count; i++) {
-        phi_random[i] = gaussian_distribution(mt);
-    }
-};
 
 /*
  *  Reduction to produce the expected exposure profile EE[t] curve for the IRS
@@ -193,6 +113,12 @@ int main() {
     // copy the spot rates as the first curve inside fwd_rates
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
 
+    // Interest Rate Swap Instrument
+    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 1, 0.04, 10.0, 0.5);
+
+    // Gaussian Random Number Generator
+    ErfInvGaussianRandomGenerator erfinv;
+
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
@@ -202,11 +128,12 @@ int main() {
         double dt = expiry/simN;
         double duration = 0.0;
 
-        // HJM Stochastic SDE Definition
-        hjm_sde sde(drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 51.0);
+        // HJM Stochastic SDE Simulation Model
+        HJMStochasticProcess hjm_sde(drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 25.0);
 
-        // Simulate all the possible  Exposure Profiles for a portfolio with an an Interest Rate Swap Instrument
-        mc_engine(exposures, erfinv, sde, simN, expiry, dtau, duration); //interest_rate_swap
+        // Monte Carlo Simulation Engine generate the Exposure IRS Grid
+        MonteCarloSimulation<ErfInvGaussianRandomGenerator, HJMStochasticProcess, InterestRateSwap> mc_engine(payOff, erfinv, hjm_sde, simN);
+        mc_engine.calculate(exposures, duration);
 
         // Calculate Statistics max, median, quartiles, 97.5th percentile on exposures
         // Calculate Potential Future Exposure (PFE) at the 97.5th percentile and media of the Positive EE

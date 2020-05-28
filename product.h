@@ -27,6 +27,16 @@ std::vector<double> pricing_points = {
         0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0
 };
 
+// Interest Rate Swap Cash Flows
+
+std::vector<double> floating_schedule = {
+        0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0
+};
+
+std::vector<double> fixed_schedule = {
+        0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0
+};
+
 // Exposure Points
 std::vector<double> exposure_timepoints = {
         1,2,3,4,5, 15, 22, 29, 30, 36, 50, 64, 76, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, 780, 900, 1020, 1140, 1260, 1380, 1500, 1720, 1840, 2140, 2520, 2880, 3240, 3600, 4800, 7200
@@ -47,10 +57,23 @@ void display_curve(std::vector<std::pair<double, double>> &curve) {
     }
 }
 
-void displaySimulationGrid(std::vector<std::vector<double>> &grid, double *phi_randoms)
-{
-    // Todo ...
-}
+/*
+ * Pricing Instrument Interest Rate Swap IRS
+ */
+struct InterestRateSwap {
+    InterestRateSwap(std::vector<double> &pricing_points_, std::vector<double> &floating_schedule_,  std::vector<double> &fixed_schedule_, double notional_, double K_, double expiry_, double dtau_) :
+            pricing_points(pricing_points_), floating_schedule(floating_schedule_), fixed_schedule(fixed_schedule_), notional(notional_), K(K_), expiry(expiry_), dtau(dtau_)
+    {}
+
+    std::vector<double> &pricing_points;
+    std::vector<double> &floating_schedule;
+    std::vector<double> &fixed_schedule;
+    double notional;
+    double K;
+    double dtau;
+    double expiry;
+};
+
 
 /*
  * The relationship between the discount function and the annually compounded yield curve, using a day count convention that reflects the
@@ -179,27 +202,45 @@ private:
 􏰷 The fixed and floating leg frequencies and day count bases are assumed to be the same for simplicity.
  */
 
-class VanillaInterestRateSwap {
+class VanillaInterestRateSwapPricer { //InterestRateSwap
 public:
-    VanillaInterestRateSwap(double _notional, int initial_cashflow_, double reference_day_, double _K, std::vector<double>& cashflow_schedule_,  HJMYieldCurveTermStructure & _yieldCurve) :
-    notional(_notional), initial_cashflow(initial_cashflow_), K(_K), reference_day(reference_day_), cashflow_schedule(cashflow_schedule_), yieldCurve(_yieldCurve)
+    VanillaInterestRateSwapPricer(int initial_cashflow_, double reference_day_, InterestRateSwap& irs_,  HJMYieldCurveTermStructure & _yieldCurve) :
+    initial_cashflow(initial_cashflow_), reference_day(reference_day_), irs(irs_), yieldCurve(_yieldCurve)
     {
           calculate();
     };
 
     void calculate() {
-        double price = 0;
+        double floatingL = floatingLeg();
+        double fixedL = fixedLeg();
+        npv = irs.notional * (floatingL - fixedL);
+    }
 
-        for (int i = initial_cashflow; i < cashflow_schedule.size(); i++) {
-            double sum = 0.0;
-            double t2 = cashflow_schedule[i];
-            double t1 = cashflow_schedule[i-1];
-            sum = yieldCurve.forward(t1, t2) - K;
+    double floatingLeg() {
+        double price = 0.0;
+        for (int i = initial_cashflow; i < irs.floating_schedule.size(); i++) {
+            double tau = 0.5;
+            double t2 = floating_schedule[i];
+            double t1 = floating_schedule[i-1];
+            double sum = yieldCurve.forward(t1, t2);
             sum *= t2;
             sum *= yieldCurve.discount(t2);
             price += sum;
         }
-        npv = notional * price;
+       return price;
+    }
+
+    double fixedLeg() {
+        double price = 0.0;
+        for (int i = initial_cashflow; i < irs.fixed_schedule.size(); i++) {
+            double t = fixed_schedule[i];
+            double tau = 1.0;
+            double sum = tau;
+            sum *= irs.K;
+            sum *= yieldCurve.discount(t);
+            price += sum;
+        }
+        return price;
     }
 
     double price() {
@@ -207,12 +248,10 @@ public:
     }
 
 private:
+    InterestRateSwap& irs;
     int initial_cashflow;
-    double notional;
     double reference_day;
-    double K;
     double npv = 0.0;
-    std::vector<double>& cashflow_schedule;
     HJMYieldCurveTermStructure &yieldCurve;
 };
 
