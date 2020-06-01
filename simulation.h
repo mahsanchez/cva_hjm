@@ -144,6 +144,43 @@ struct HJMStochasticProcess {
     double expiry;
 };
 
+/*
+ * (Musiela Parameterisation HJM) We simulate f(t+dt)=f(t) + dfbar  where SDE dfbar =  m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt  and phi ~ N(0,1)
+ * This SDE HJM is evolved like a stencil. Each point value is calculated in a point by resting the value of the upper right point neighbor minus the uppter left neighbor point
+ * Latest point value is totally the other way around
+ */
+
+#if defined(__CUDA_ARCH__)
+__inline__ __global__
+#else
+inline
+#endif
+double sde_hjm_evolve(double *fwd_rates, int tenor, int tenors_size, int dt, int dtau, int dimension, double *gaussian_rand, double *volatilities, double *drifts) {
+    double dfbar = 0.0;
+
+    #pragma unroll
+    for (int i = 0; i < dimension; i++) {
+        dfbar += volatilities[i*tenors_size + tenor] * gaussian_rand[i];
+    }
+#if defined(__CUDA_ARCH__)
+    dfbar *= sqrtf(dt);
+#else
+    dfbar *= std::sqrt(dt);
+#endif
+    dfbar += drifts[tenor] * dt;
+    double dF = 0.0;
+    if (tenor < (tenors_size - 1)) {
+        dF += fwd_rates[tenor+1] - fwd_rates[tenor];
+    }
+    else {
+        dF += fwd_rates[tenor] - fwd_rates[tenor-1];
+    }
+    dfbar += (dF/dtau) * dt;
+    dfbar = fwd_rates[tenor] + dfbar;
+
+    return dfbar;
+}
+
 
 /*
  * This kernel initialize CURAND gaussian random generator.
@@ -157,31 +194,6 @@ static __global__ void rngSetupStates( curandState *rngState, int device_id)
     // Each threadblock gets different seed,
     // Threads within a threadblock get different sequence numbers
     curand_init(blockIdx.x + gridDim.x * device_id, threadIdx.x, 0, &rngState[tid]);
-}
-
-/*
- * (Musiela Parameterisation HJM) We simulate f(t+dt)=f(t) + dfbar  where SDE dfbar =  m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt  and phi ~ N(0,1)
- * This SDE HJM is evolved like a stencil. Each point value is calculated in a point by resting the value of the upper right point neighbor minus the uppter left neighbor point
- * Latest point value is totally the other way around
- */
-__global__
-inline double sde_hjm_evolve(int sim, int tenor, double *fwd_rates, double *gaussian_rand, double *volatilities, double *drift) {
-        double dfbar = 0.0;
-        for (int i = 0; i < dimension; i++) {
-            dfbar +=  volatilities[i][tenor] * gaussian_rand[i];
-        }
-        dfbar *= std::sqrt(dt);
-        dfbar += drifts[tenor] * dt;
-        double dF = 0.0;
-        if (tenor < (tenors_size - 1)) {
-            dF += fwd_rates[tenor+1] - fwd_rates[tenor];
-        }
-        else {
-            dF += fwd_rates[tenor] - fwd_rates[tenor-1];
-        }
-        dfbar += (dF/dtau) * dt;
-        dfbar = fwd_rates[sim-1][tenor] + dfbar;
-        return dfbar;
 }
 
 /*
@@ -344,6 +356,59 @@ public:
         }
         //displaySimulationGrid(stochasticProcess.fwd_rates, phi_random);
     }
+
+// suitable cuda implementation for path generation
+#if defined(__CUDA_ARCH__)
+    void generatePaths2() {
+        std::vector<double> rates_accumulator(size, 0.0);
+        std::vector<double> discounts(size * size, 0.0);
+        std::vector<double> fra(size * size, 0.0);
+        std::vector<double> fwd_rates(size, 0.0); // initialize it with spot_rates
+        std::vector<double> fwd_rates2(size, 0.0);
+
+        int size = payOff.expiry/payOff.dtau + 1;
+        double tau = payOff.floating_schedule[1];
+        double dt = payOff.expiry/simN;
+        int delta = tau/dt;  // simulation steps
+
+        // initialize fwd_curve with spot_rates values
+        std::copy(stochasticProcess.spot_rates.begin(), stochasticProcess.spot_rates.end(), fwd_rates.begin());
+
+        for (int simulation = 0; simulation < simN; simulation += delta) {
+            // For each point in the Floating Leg of the IRS
+            for (int i = 0; i < delta; i++) {
+                // evolve the whole fordward curve using hjm sde
+                for (int tenor = 0; tenor < stochasticProcess.tenors_size; t++) {
+                    sde_hjm_evolve(fwd_rates2, fwd_rates, tenor, tenors_size, dt, dtau, dimension, phi_random, &stochasticProcess.volatilities[0][0], &stochasticProcess.drifts[0]);
+                }
+
+                // std::plus adds together its two arguments:
+                std::transform(fwd_rates2.begin(), fwd_rates2.end(), fwd_rates.begin(), rates_accumulator.begin(), std::plus<double>());
+
+                //std::swap(fwd_rates, fwd_rates2);
+                std::copy(fwd_rates2.begin(), fwd_rates2.end(), fwd_rates.begin());
+            }
+
+            // build curve for forward rate FRA(t; t, T)
+            std::copy(fwd_rates.begin(), fwd_rates.end(), fra.begin());
+
+            // apply prefix sum all over the 10Y period day across the curve
+            std::partial_sum(rates_accumulator.begin(), rates_accumulator.end(), rates_accumulator.begin(), std::plus<double>());
+
+            // apply the exp function exp( -x * dt) to calculate the discount factor
+            std::transform(rates_accumulator.begin(), rates_accumulator.end(), rates_accumulator.begin(), [dt](double &x) {
+                return std::exp(-x * dt);
+            });
+
+            //scatter the accumulates rates values across all discount curves
+            for (int t = 0; t < size; t++) {
+                discount[t*size + tenor ] = rates_accumulator[t];
+            }
+        }
+
+
+    }
+#endif
 
     /*
      * Mark to Market Exposure profile calculation for Interest Rate Swap (marktomarket) pricePayOff()
