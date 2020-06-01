@@ -96,7 +96,7 @@ int main() {
     //callibrate_volatilities_hjm(volatilities, drifts, yield_curve_EURIBOR_6M_10Y);
 
     // Discounts  or Zero Coupon Bond bootstrapped from the Spot Rates
-    SpotRateYieldCurveTermStructure yieldCurve(spot_rates, expiry, dtau);
+    SpotRateYieldCurveTermStructure yieldCurve(spot_rates, 25.0, dtau);
 
     // Recovery Rates
     double recovery = 0.04;
@@ -114,10 +114,11 @@ int main() {
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
 
     // Interest Rate Swap Instrument
-    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 1, 0.04, 10.0, 0.5);
+    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.04, 10.0, 0.5);
 
     // Gaussian Random Number Generator
     ErfInvGaussianRandomGenerator erfinv;
+    NormalRandomGenerator gaussian;
 
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;

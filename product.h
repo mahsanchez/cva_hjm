@@ -58,6 +58,18 @@ void display_curve(std::vector<std::pair<double, double>> &curve) {
 }
 
 /*
+ * Prefix Sum
+ */
+void fillPrefixSum(double *prefixSum, double *arr, int n)
+{
+    prefixSum[0] = arr[0];
+    // Adding present element with previous element
+    for (int i = 1; i < n; i++) {
+        prefixSum[i] = prefixSum[i - 1] + arr[i];
+    }
+}
+
+/*
  * Pricing Instrument Interest Rate Swap IRS
  */
 struct InterestRateSwap {
@@ -94,13 +106,15 @@ public:
     }
 
     void bootstrapDiscountFactorsCurve(std::vector<double>& rates, double expiry, double dtau = 0.5) {
-        double tenor_size = expiry/dtau;
-        double tenor = dtau;
+        double tenor_size = expiry/dtau + 1;
+        double tenor = 0.5;
+
+        std::vector<double> partial_rates(rates.size(), 0.0);
+        fillPrefixSum(&partial_rates[0], &rates[0], rates.size());
 
         discountCurve.add(0.0, 1.0);
-
-        for (int i = 1; i < tenor_size; i++) {
-            double discount = std::exp( -rates[i] * tenor);
+        for (int i = 0; i < rates.size(); i++) {
+            double discount = std::exp( -partial_rates[i] * dtau);
             discountCurve.add(tenor, discount);
             tenor += dtau;
         }
