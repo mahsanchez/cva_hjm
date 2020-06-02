@@ -1,6 +1,6 @@
 # cva
 
-DONE - Reduce memory usage and batched Monte Carlo simulation to be suitable for CUDA acceleration [02/06/2020]
+DONE - Reduced memory usage and batched Monte Carlo simulation to be suitable for CUDA acceleration [02/06/2020]
        See Method MonteCarloSimulation::generatePath in header simulation.h
 
 TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array [03/06/2020]
