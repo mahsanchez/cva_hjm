@@ -102,7 +102,7 @@ int main() {
     double recovery = 0.04;
 
     // Survival Probability Bootstrapping
-    SurvivalProbabilityTermStructure probabilitySurvivalCurve(tenors, spreads, yieldCurve, recovery, tenor_size); // dtau
+    SurvivalProbabilityTermStructure survivalProbabilityCurve(tenors, spreads, yieldCurve, recovery, tenor_size); // dtau
 
     // Total Number of simulation points
     int simulation_points = expiry/dtau;
@@ -130,7 +130,7 @@ int main() {
         double duration = 0.0;
 
         // HJM Stochastic SDE Simulation Model
-        HJMStochasticProcess hjm_sde(drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 25.0);
+        HJMStochasticProcess hjm_sde(spot_rates, drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 25.0);
 
         // Monte Carlo Simulation Engine generate the Exposure IRS Grid
         MonteCarloSimulation<ErfInvGaussianRandomGenerator, HJMStochasticProcess, InterestRateSwap> mc_engine(payOff, erfinv, hjm_sde, simN);
@@ -149,7 +149,7 @@ int main() {
         // Calculate The Unilateral CVA - Credit Value Adjustment Metrics Calculation.
         // For two conterparties A - B. Counterparty A want to know how much is loss in a contract due to B defaulting
         ExpectedExposureTermStructure expectedExposureCurve(pricing_points,expected_exposure, expiry);
-        double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, probabilitySurvivalCurve, pricing_points, expiry);
+        double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, survivalProbabilityCurve, pricing_points, expiry);
 
         std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << duration << std::endl;
 

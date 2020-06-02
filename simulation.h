@@ -6,7 +6,7 @@
 #include <iterator>
 #include <iomanip>
 #include <random>
-//#include <boost/math/special_functions/erf.hpp>
+#include <boost/math/special_functions/erf.hpp>
 
 #if defined(__CUDA_ARCH__)
     #include <cuda_runtime_api.h>
@@ -80,8 +80,8 @@ class ErfInvGaussianRandomGenerator {
 public:
     void operator() (double *phi_random, int count) {
         for (int i = 0; i < count; i++) {
-            //phi_random[i] = boost::math::erf_inv(uniform_distribution(mt));
-            phi_random[i] = MBG_erfinv(uniform_distribution(mt));
+            phi_random[i] = boost::math::erf_inv(uniform_distribution(mt));
+            //phi_random[i] = MBG_erfinv(uniform_distribution(mt));
         }
     }
 };
@@ -101,8 +101,8 @@ public:
  */
 struct HJMStochasticProcess {
 
-    HJMStochasticProcess(std::vector<double> &drifts_, std::vector<std::vector<double>>& volatilities_, std::vector<std::vector<double>>& fwd_rates_, int dimension_, double dt_, double dtau_, int tenors_size_, double expiry_) :
-            drifts(drifts_), volatilities(volatilities_), fwd_rates(fwd_rates_), dimension(dimension_), dt(dt_), dtau(dtau_), tenors_size(tenors_size_), expiry(expiry_) {
+    HJMStochasticProcess(std::vector<double> &spot_rates_, std::vector<double> &drifts_, std::vector<std::vector<double>>& volatilities_, std::vector<std::vector<double>>& fwd_rates_, int dimension_, double dt_, double dtau_, int tenors_size_, double expiry_) :
+        spot_rates(spot_rates_), drifts(drifts_), volatilities(volatilities_), fwd_rates(fwd_rates_), dimension(dimension_), dt(dt_), dtau(dtau_), tenors_size(tenors_size_), expiry(expiry_) {
 
     }
 
@@ -135,6 +135,7 @@ struct HJMStochasticProcess {
     }
 
     std::vector<double> &drifts;
+    std::vector<double> &spot_rates;
     std::vector<std::vector<double>>& volatilities;
     std::vector<std::vector<double>>& fwd_rates;
     int dimension;
@@ -152,10 +153,8 @@ struct HJMStochasticProcess {
 
 #if defined(__CUDA_ARCH__)
 __inline__ __global__
-#else
-inline
 #endif
-double sde_hjm_evolve(double *fwd_rates, int tenor, int tenors_size, int dt, int dtau, int dimension, double *gaussian_rand, double *volatilities, double *drifts) {
+double sde_hjm_evolve(double *fwd_rates, int tenor, int tenors_size, double dt, double dtau, int dimension, double *gaussian_rand, double *volatilities, double *drifts) {
     double dfbar = 0.0;
 
     #pragma unroll
@@ -347,73 +346,87 @@ public:
 
     /*
      * Evolve the Forward Rates Risk Factor Simulation using HJM MonteCarlo
+     * Using a suitable CUDA implementation
      */
+
     void generatePaths() {
-        for (int s = 1; s < simN; s++) {
-            for (int t = 0; t < stochasticProcess.tenors_size; t++) {
-                stochasticProcess.evolve(s, t, &phi_random[s * stochasticProcess.dimension]);
-            }
-        }
-        //displaySimulationGrid(stochasticProcess.fwd_rates, phi_random);
-    }
-
-// suitable cuda implementation for path generation
-#if defined(__CUDA_ARCH__)
-    void generatePaths2() {
-        std::vector<double> rates_accumulator(size, 0.0);
-        std::vector<double> discounts(size * size, 0.0);
-        std::vector<double> fra(size * size, 0.0);
-        std::vector<double> fwd_rates(size, 0.0); // initialize it with spot_rates
-        std::vector<double> fwd_rates2(size, 0.0);
-
+        int tenor_size = stochasticProcess.tenors_size;
         int size = payOff.expiry/payOff.dtau + 1;
         double tau = payOff.floating_schedule[1];
         double dt = payOff.expiry/simN;
         int delta = tau/dt;  // simulation steps
+        int dimension = stochasticProcess.dimension;
+
+        std::vector<double> rates_accumulator(tenor_size, 0.0);
+        std::vector<double> fwd_rates(tenor_size, 0.0); // initialize it with spot_rates
+        std::vector<double> fwd_rates2(tenor_size, 0.0);
+
+        // Simulation Grid for Discount Factors and Forward Rates
+        discounts.resize(size * size);
+        fra.resize(size * size);
 
         // initialize fwd_curve with spot_rates values
         std::copy(stochasticProcess.spot_rates.begin(), stochasticProcess.spot_rates.end(), fwd_rates.begin());
+        std::copy(stochasticProcess.spot_rates.begin(), stochasticProcess.spot_rates.end(), rates_accumulator.begin());
 
-        for (int simulation = 0; simulation < simN; simulation += delta) {
-            // For each point in the Floating Leg of the IRS
+        // Initialize at zero with the spot_rates
+        for (int t = 0; t < size; t++) {
+            discounts[t*size] = stochasticProcess.spot_rates[t];
+        }
+
+        int simulation_points = (int) (payOff.expiry/payOff.dtau + 1);
+
+        // Simulate the rates on each simulation point based on the Floating Leg of the IRS
+        for (int sim_point = 0; sim_point < simulation_points; sim_point++) {
             for (int i = 0; i < delta; i++) {
-                // evolve the whole fordward curve using hjm sde
-                for (int tenor = 0; tenor < stochasticProcess.tenors_size; t++) {
-                    sde_hjm_evolve(fwd_rates2, fwd_rates, tenor, tenors_size, dt, dtau, dimension, phi_random, &stochasticProcess.volatilities[0][0], &stochasticProcess.drifts[0]);
+                // evolve the whole forward curve using hjm sde
+                for (int t = 0; t < stochasticProcess.tenors_size; t++) {
+                    fwd_rates2[t] = sde_hjm_evolve(&fwd_rates[0], t, tenor_size, dt, stochasticProcess.dtau, dimension, &phi_random[sim_point * dimension], &stochasticProcess.volatilities[0][0], &stochasticProcess.drifts[0]);
+                    rates_accumulator[t] += fwd_rates2[t];
                 }
-
-                // std::plus adds together its two arguments:
-                std::transform(fwd_rates2.begin(), fwd_rates2.end(), fwd_rates.begin(), rates_accumulator.begin(), std::plus<double>());
-
                 //std::swap(fwd_rates, fwd_rates2);
                 std::copy(fwd_rates2.begin(), fwd_rates2.end(), fwd_rates.begin());
+#if DEBUG
+                display_curve(fwd_rates);
+#endif
             }
 
+            // Constant term 1/dtau value inside Forward Libor Calculation 1/dtau * ((exp(rate[t]*dtau) - 1)
+            const double pdtau = payOff.dtau;
+
             // build curve for forward rate FRA(t; t, T)
-            std::copy(fwd_rates.begin(), fwd_rates.end(), fra.begin());
-
-            // apply prefix sum all over the 10Y period day across the curve
-            std::partial_sum(rates_accumulator.begin(), rates_accumulator.end(), rates_accumulator.begin(), std::plus<double>());
-
-            // apply the exp function exp( -x * dt) to calculate the discount factor
-            std::transform(rates_accumulator.begin(), rates_accumulator.end(), rates_accumulator.begin(), [dt](double &x) {
-                return std::exp(-x * dt);
+            std::transform(fwd_rates.begin(), fwd_rates.end(), fra.begin() + sim_point*simulation_points, [&pdtau](double rate) {
+                return 1/pdtau * (std::exp(rate * pdtau) - 1);
             });
 
             //scatter the accumulates rates values across all discount curves
             for (int t = 0; t < size; t++) {
-                discount[t*size + tenor ] = rates_accumulator[t];
+                discounts[t*size + sim_point ] = rates_accumulator[t];
             }
-        }
+       }
 
+        // Build the discount factor Curve
+        for (int i = 0; i < simulation_points*simulation_points; i += simulation_points) {
+            // apply prefix sum all over the 10Y period day across the curve
+            prefix_sum(&discounts[i], &discounts[i], simulation_points);
 
-    }
+            // apply the exp function exp( -x * dt) to calculate the discount factor
+            for (int index = 0; index < simulation_points; index++) {
+                double x = discounts[i + index];
+                discounts[i + index] = std::exp(-x * dt);
+            }
+#if DEBUG
+            display_curve(discounts, i, i + simulation_points);
 #endif
+        }
+    }
+
 
     /*
      * Mark to Market Exposure profile calculation for Interest Rate Swap (marktomarket) pricePayOff()
      */
     void pricePayOff(std::vector<double> &exposure) {
+        //HJMYieldCurveTermStructure yieldCurve(discounts, fra, payOff.expiry, dt, payOff.dtau);
         for (int t = 1; t < payOff.pricing_points.size() - 1; t++) {
             double reference_day = payOff.pricing_points[t];
             HJMYieldCurveTermStructure yieldCurve(stochasticProcess.fwd_rates, reference_day, payOff.expiry, dt, payOff.dtau);
@@ -435,6 +448,8 @@ protected:
     int randoms_count;
     int simN;
     double dt;
+    std::vector<double> discounts;
+    std::vector<double> fra;
 };
 
 

@@ -6,6 +6,18 @@
 #include <cmath>
 #include <algorithm>
 
+/*
+ * Prefix Sum
+ */
+void prefix_sum(double *prefixSum, double *arr, int n)
+{
+    prefixSum[0] = arr[0];
+    // Adding present element with previous element
+    for (int i = 1; i < n; i++) {
+        prefixSum[i] = prefixSum[i - 1] + arr[i];
+    }
+}
+
 template <typename F>
 float trapezoidal(F f, double a, double b, int n, double h)
 {

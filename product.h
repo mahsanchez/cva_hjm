@@ -10,6 +10,8 @@
 
 #include "q_numerics.h"
 
+#define DEBUG 100
+
 using namespace std;
 
 // Tenors as seen in the Spot Rate Curve coming from Bank of England
@@ -49,6 +51,12 @@ void display_curve(std::vector<double> &curve) {
     std::cout << std::endl;
 }
 
+void display_curve(std::vector<double> &curve, int begin, int end) {
+    std::cout << std::setprecision(10)<< std::fixed;
+    std::copy(curve.begin() + begin, curve.begin() + end, std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
+}
+
 void display_curve(std::vector<std::pair<double, double>> &curve) {
     std::cout << std::setprecision(10)<< std::fixed;
     for (int i = 0; i < curve.size(); i++) {
@@ -57,17 +65,6 @@ void display_curve(std::vector<std::pair<double, double>> &curve) {
     }
 }
 
-/*
- * Prefix Sum
- */
-void fillPrefixSum(double *prefixSum, double *arr, int n)
-{
-    prefixSum[0] = arr[0];
-    // Adding present element with previous element
-    for (int i = 1; i < n; i++) {
-        prefixSum[i] = prefixSum[i - 1] + arr[i];
-    }
-}
 
 /*
  * Pricing Instrument Interest Rate Swap IRS
@@ -110,7 +107,7 @@ public:
         double tenor = 0.5;
 
         std::vector<double> partial_rates(rates.size(), 0.0);
-        fillPrefixSum(&partial_rates[0], &rates[0], rates.size());
+        prefix_sum(&partial_rates[0], &rates[0], rates.size());
 
         discountCurve.add(0.0, 1.0);
         for (int i = 0; i < rates.size(); i++) {
