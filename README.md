@@ -1,4 +1,4 @@
-# cva
+# cva / interest rate swap / hjm interest rate model
 
 Reduced memory usage and batched Monte Carlo simulation to be suitable for CUDA acceleration [02/06/2020]
        See Method MonteCarloSimulation::generatePath in header simulation.h
