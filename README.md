@@ -7,4 +7,4 @@ Use boost function boost::math::erf_inv to generate gaussian variates based on a
 
 TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array [03/06/2020]
 
-TODO - Test MonteCarlo Convergence for the CVA value [03/06/2020]
+TODO - Test MonteCarlo Convergence for the CVA IRS value [03/06/2020]
