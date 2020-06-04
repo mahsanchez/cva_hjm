@@ -10,7 +10,7 @@
 
 #include "q_numerics.h"
 
-#define DEBUG 100
+#define DEBUG 0
 
 using namespace std;
 
@@ -51,8 +51,16 @@ void display_curve(std::vector<double> &curve) {
     std::cout << std::endl;
 }
 
-void display_curve(std::vector<double> &curve, int begin, int end) {
+void display_curve(std::vector<double> &curve, std::string label) {
     std::cout << std::setprecision(10)<< std::fixed;
+    std::cout << label << std::endl;
+    std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
+}
+
+void display_curve(std::vector<double> &curve, int begin, int end, std::string label) {
+    std::cout << std::setprecision(10)<< std::fixed;
+    std::cout << label << std::endl;
     std::copy(curve.begin() + begin, curve.begin() + end, std::ostream_iterator<double>(std::cout, " "));
     std::cout << std::endl;
 }
@@ -122,82 +130,39 @@ private:
 };
 
 
+
+
 class HJMYieldCurveTermStructure {
 public:
-    HJMYieldCurveTermStructure(std::vector<std::vector<double>>& fwds, double reference_day, double expiry, double dt_, double dtau_ = 0.5) {
-        dtau = dtau_;
-        dt = dt_;
-        // Build Forward Rate
-        bootstrapForwardCurve(fwds, reference_day, expiry, dt, dtau);
-        // Build Discount Curve
-        bootstrapDiscountFactorsCurve(fwds, reference_day, expiry, dt, dtau);
+    HJMYieldCurveTermStructure(std::vector<std::vector<double>>& fwds_, double expiry, double dt_, double dtau_) :
+    fwds(fwds_), dtau(dtau_), dt(dt_) {
     }
 
-    // discount factor at time t2 as seem from time t1
-    double discount(double t) {
-        double df = discountCurve.find(t);
-        return df;
+    // discount factor at time t2 as seem from time reference_day
+    double discount(double reference_day, double t) {
+        int simulation = reference_day/dt;
+        int tenor = t/dtau;
+        double sum = 0.0;
+        for (int s = 0; s < simulation; s++) {
+            sum += fwds[s][tenor];
+        }
+        double zcb = std::exp(-sum * dt);
+        return zcb;
     }
 
     // Forward Libor Rate as  factor at time t2 as seem L(t; t1, t2)
-    double forward(double t, double t2) {
-        double df = forwardCurve.find(t);
-        return df;
-    }
-
-    // Compute Forward LIBOR as L(t; t, T) At Fixed Tenors L=m(e^(f/m)- 1), where m is compounding frequency per year  m = 1/0.5
-    void bootstrapForwardCurve(std::vector<std::vector<double>>& fwdGrid, double reference_day, double expiry, double dt, double dtau) {
+    double forwardLibor(double reference_day, double t, double t2) {
         int simulation = reference_day/dt;
-        int tenor_size = expiry/dtau;
-        double tenor = 0.0;
-
-        for (int i = 0; i < tenor_size; ++i) {
-            double r = fwdGrid[simulation][i];
-            double libor = 1.0/dtau*(std::exp(r*dtau)-1.0);
-            forwardCurve.add(tenor, libor);
-            tenor += dtau;
-        }
-    }
-
-    /*
-     * column to find the tenor related with the start day [ as seen from today [0], as seen in 6 months [0.5]  and so on
-     * Entire row from fwdGrid begin to end; but only sum on tenors interested points tenor mod 50  dtau/dt
-     */
-    void bootstrapDiscountFactorsCurve(std::vector<std::vector<double>>& fwdGrid, double reference_day, double expiry, double dt, double dtau) {
-        int tenor = reference_day/dtau; //
-        int points_size = expiry/dtau;
-
-        discountCurve.add(0.0, 1.0);
-
-        int begin = 0;
-        int leap = dtau/dt;
-        int end = leap;
-
-        double t = 0.0;
-        for (int i = 1; i < points_size; i++) {
-            double sum = 0.0;
-            for (int sim = 0; sim < end; sim++) {
-                sum += fwdGrid[sim][tenor];
-            }
-            double zcb = std::exp(-sum * dt);
-            discountCurve.add(t, zcb);
-            t += dtau;
-            end += leap;
-        }
-        //Display Discount Curve
-        //display_curve(discountCurve.getPoints());
-    }
-
-    linear_interpolator getDiscountCurve() {
-        return discountCurve;
+        int tenor = t/dtau + 1;
+        double r = fwds[simulation][tenor];
+        double libor = 1.0/dtau*(std::exp(r*dtau)-1.0);
+        return libor;
     }
 
 private:
-
     double dtau;
     double dt;
-    linear_interpolator forwardCurve;
-    linear_interpolator discountCurve;
+    std::vector<std::vector<double>>& fwds;
 };
 
 
@@ -215,43 +180,25 @@ private:
 
 class VanillaInterestRateSwapPricer { //InterestRateSwap
 public:
-    VanillaInterestRateSwapPricer(int initial_cashflow_, double reference_day_, InterestRateSwap& irs_,  HJMYieldCurveTermStructure & _yieldCurve) :
-    initial_cashflow(initial_cashflow_), reference_day(reference_day_), irs(irs_), yieldCurve(_yieldCurve)
+    VanillaInterestRateSwapPricer(double reference_day_, InterestRateSwap& irs_,  HJMYieldCurveTermStructure & _yieldCurve) :
+    reference_day(reference_day_), irs(irs_), yieldCurve(_yieldCurve)
     {
           calculate();
     };
 
     void calculate() {
-        double floatingL = floatingLeg();
-        double fixedL = fixedLeg();
-        npv = irs.notional * (floatingL - fixedL);
-    }
-
-    double floatingLeg() {
         double price = 0.0;
-        for (int i = initial_cashflow; i < irs.floating_schedule.size(); i++) {
-            double tau = 0.5;
-            double t2 = floating_schedule[i];
-            double t1 = floating_schedule[i-1];
-            double sum = yieldCurve.forward(t1, t2);
+        double dtau = 0.5;
+
+        for (double day = reference_day; day < irs.expiry; day += dtau) {
+            double t2 = day;
+            double t1 = day - dtau;
+            double sum = (yieldCurve.forwardLibor(reference_day, t1, t2) - irs.K);
             sum *= t2;
-            sum *= yieldCurve.discount(t2);
-            price += sum;
+            sum *= yieldCurve.discount(reference_day, t2);
+            price = sum;
         }
-       return price;
-    }
-
-    double fixedLeg() {
-        double price = 0.0;
-        for (int i = initial_cashflow; i < irs.fixed_schedule.size(); i++) {
-            double t = fixed_schedule[i];
-            double tau = 1.0;
-            double sum = tau;
-            sum *= irs.K;
-            sum *= yieldCurve.discount(t);
-            price += sum;
-        }
-        return price;
+       npv = price;
     }
 
     double price() {
@@ -260,7 +207,6 @@ public:
 
 private:
     InterestRateSwap& irs;
-    int initial_cashflow;
     double reference_day;
     double npv = 0.0;
     HJMYieldCurveTermStructure &yieldCurve;

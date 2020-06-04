@@ -78,6 +78,9 @@ std::vector<std::vector<double>> fwd_rates(MAX_SIM, std::vector<double>(MAX_TENO
 // Generate one Exposure Profile by Simulation Step
 std::vector<std::vector<double>> exposures(MAX_SIM, std::vector<double>(MAX_EXPIRY/DTAU, 0.0));
 
+// Gaussian Randoms
+std::vector<double> phi_random(MAX_SIM*3, 0.0);
+
 /*
  * Main Entry Point
 // Initialize input parameters and trigger the mc_simulation to generate the averaged EE[t] for the IRS
@@ -114,17 +117,17 @@ int main() {
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
 
     // Interest Rate Swap Instrument
-    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.04, 10.0, 0.5);
+    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.01, 10.0, 0.5);
 
     // Gaussian Random Number Generator
     ErfInvGaussianRandomGenerator erfinv;
-    NormalRandomGenerator gaussian;
+    NormalRandomGenerator normal_gaussian;
 
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
 
     //  Increase the simulations numbers and analyze convergence and std deviation
-    for (int simN = 500; simN < MAX_SIM; simN += 250) {
+    for (int simN = 1000; simN < MAX_SIM; simN += 250) {
         // simulation step size
         double dt = expiry/simN;
         double duration = 0.0;
@@ -133,7 +136,7 @@ int main() {
         HJMStochasticProcess hjm_sde(spot_rates, drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 25.0);
 
         // Monte Carlo Simulation Engine generate the Exposure IRS Grid
-        MonteCarloSimulation<ErfInvGaussianRandomGenerator, HJMStochasticProcess, InterestRateSwap> mc_engine(payOff, erfinv, hjm_sde, simN);
+        MonteCarloSimulation<ErfInvGaussianRandomGenerator, HJMStochasticProcess, InterestRateSwap> mc_engine(payOff, erfinv, hjm_sde, phi_random, simN);
         mc_engine.calculate(exposures, duration);
 
         // Calculate Statistics max, median, quartiles, 97.5th percentile on exposures
@@ -144,7 +147,7 @@ int main() {
         reduce(expected_exposure, exposures, simulation_points, simN);
 
         // Report Expected Exposure Profile Curve
-        display_curve(expected_exposure);
+        //display_curve(expected_exposure);
 
         // Calculate The Unilateral CVA - Credit Value Adjustment Metrics Calculation.
         // For two conterparties A - B. Counterparty A want to know how much is loss in a contract due to B defaulting
@@ -156,6 +159,7 @@ int main() {
         // Compare the exposures at maximum with percentiles consider
         // Sensitivity Analysis considering the very small and negative rates
     }
+
 
     exit(0);
 }
