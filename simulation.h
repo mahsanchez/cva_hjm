@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <random>
 #include <boost/math/special_functions/erf.hpp>
+#include "mkl_vsl.h"
 
 #include "product.h"
 
@@ -17,6 +18,7 @@ std::random_device rd;
 std::mt19937  mt(rd() );
 std::uniform_real_distribution<double> uniform_distribution(0.0, 1.0);
 std::normal_distribution<double> gaussian_distribution(0.0, 1.0);
+
 
 //Error Function Inverse over uniform distributed numbers to generate Gaussian Random Generators
 class ErfInvGaussianRandomGenerator {
@@ -36,6 +38,27 @@ public:
             phi_random[i] = gaussian_distribution(mt);
         }
     }
+};
+
+// Intel MKL Gaussian Random Number Generator
+// https://scc.ustc.edu.cn/zlsc/sugon/intel/mkl/mkl_manual/GUID-50EFE620-4696-4249-86E9-93A6C94A199C.htm
+// https://software.intel.com/content/www/us/en/develop/documentation/mkl-developer-reference-c/top/statistical-functions/random-number-generators/basic-generators/brng-parameter-definition.html
+// https://software.intel.com/content/www/us/en/develop/documentation/mkl-developer-reference-c/top/statistical-functions/random-number-generators/distribution-generators/continuous-distributions/vrnggaussian.html
+class VSLRNGRandomGenerator {
+public:
+    VSLRNGRandomGenerator() {
+        vslNewStream( &stream, VSL_BRNG_MT19937, 777 );
+    }
+
+    ~VSLRNGRandomGenerator() {
+        vslDeleteStream( &stream );
+    }
+
+    void operator() (double *phi_random, int count) {
+        vdRngGaussian( VSL_RNG_METHOD_GAUSSIAN_ICDF, stream, count, phi_random, 0.0, 1.0 );
+    }
+private:
+    VSLStreamStatePtr stream;
 };
 
 /*
@@ -97,7 +120,7 @@ struct HJMStochasticProcess {
 template<typename GaussianGenerator, typename StochasticProcess, typename PayOff> //Statistics
 class MonteCarloSimulation {
 public:
-    MonteCarloSimulation(PayOff &payOff_, GaussianGenerator &gaussian_generator_, StochasticProcess &stochasticProcess_, std::vector<double>& phi_random_, int simN_) :
+    MonteCarloSimulation(PayOff &payOff_, GaussianGenerator &gaussian_generator_, StochasticProcess &stochasticProcess_, double* phi_random_, int simN_) :
             payOff(payOff_), phi_random(phi_random_), gaussian_generator(gaussian_generator_), stochasticProcess(stochasticProcess_), simN(simN_)
      {
         // Simulation Step
@@ -113,10 +136,9 @@ public:
         auto start = std::chrono::high_resolution_clock::now();
 
         // Run simulation to generate Forward Rates Risk Factors Grid using HJM Model and Musiela SDE ( CURAND )
-#if !defined(__CUDA_ARCH__)
         for (int sim = 1; sim < simN; sim++) {
             // Gaussian Random Number Generation
-            gaussian_generator(&phi_random[0], randoms_count);
+            gaussian_generator(phi_random, randoms_count);
 
             // Evolve the Forward Rates Risk Factor Simulation Path using HJM Model
             generatePaths();
@@ -124,6 +146,9 @@ public:
             // Interest Rate Swap Mark to Market pricing the IRS across all pricing points
             pricePayOff(exposures[sim]);
         }
+
+#if !defined(__CUDA_ARCH__)
+        // MC Simulation CUDA Kernel launch here
 #endif
 
        // Display EE[t] curve realization for simulation sim
@@ -141,8 +166,8 @@ public:
             for (int t = 0; t < stochasticProcess.tenors_size; t++) {
                 stochasticProcess.evolve(s, t, &phi_random[s * stochasticProcess.dimension]);
             }
-#if DEBUG
-            display_curve(stochasticProcess.fwd_rates[s]);
+#if DEBUG_HJM
+            display_curve(stochasticProcess.fwd_rates[s], &phi_random[s * stochasticProcess.dimension]);
 #endif
         }
     }
@@ -169,7 +194,7 @@ protected:
     curandState * __restrict rngStates;
     double *fwd_rates;
 #endif
-    std::vector<double>& phi_random;
+    double* phi_random;
     PayOff &payOff;
     GaussianGenerator &gaussian_generator;
     StochasticProcess &stochasticProcess;

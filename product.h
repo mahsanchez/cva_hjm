@@ -11,6 +11,7 @@
 #include "q_numerics.h"
 
 #define DEBUG 0
+#define DEBUG_HJM 0
 
 using namespace std;
 
@@ -48,6 +49,13 @@ std::vector<double> exposure_timepoints = {
 void display_curve(std::vector<double> &curve) {
     std::cout << std::setprecision(10)<< std::fixed;
     std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << std::endl;
+}
+
+void display_curve(std::vector<double> &curve, double *phi_random) {
+    std::cout << std::setprecision(10)<< std::fixed;
+    std::copy(curve.begin(), curve.end(), std::ostream_iterator<double>(std::cout, " "));
+    std::cout << "      " << phi_random[0] << " " << phi_random[1] << " " << phi_random[2];
     std::cout << std::endl;
 }
 
@@ -267,6 +275,11 @@ public:
             }
         }
     }
+
+    linear_interpolator getPoints() {
+        return interpolator;
+    }
+
 private:
     linear_interpolator interpolator;
 };
@@ -294,13 +307,13 @@ private:
  * CVA Calculation
  * CVA =  E [ (1 - R) [ DF[t] * EE[t] * dPD[t] ] ]
  */
-double calculate_cva(double recovery, SpotRateYieldCurveTermStructure &yieldCurve, ExpectedExposureTermStructure &expected_exposure, SurvivalProbabilityTermStructure &survprob, std::vector<double> &exposure_points, int maturity, double dtau = 0.5) {
+double calculate_cva(double recovery, SpotRateYieldCurveTermStructure &yieldCurve, std::vector<double>& exposure_curve, SurvivalProbabilityTermStructure &survprob, std::vector<double> &exposure_points, int maturity, double dtau = 0.5) {
     double cva = 0.0;
 
-    for (int i = 1; i < exposure_points.size() - 1; i++) {
+    for (int i = 0; i < exposure_points.size() - 1; i++) {
         double t = exposure_points[i];
         double t0 = exposure_points[i-1];
-        cva += yieldCurve.discount(t) * expected_exposure(t) * (survprob(t0) - survprob(t) ) ;
+        cva += yieldCurve.discount(t) * exposure_curve[t] * (survprob(t0) - survprob(t) ) ;
     }
 
     cva = cva * (1 - recovery) ;

@@ -122,6 +122,7 @@ int main() {
     // Gaussian Random Number Generator
     ErfInvGaussianRandomGenerator erfinv;
     NormalRandomGenerator normal_gaussian;
+    VSLRNGRandomGenerator vsl_gaussian;
 
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
@@ -136,7 +137,7 @@ int main() {
         HJMStochasticProcess hjm_sde(spot_rates, drifts, volatilities, fwd_rates, dimension, dt, dtau, tenors_size, 25.0);
 
         // Monte Carlo Simulation Engine generate the Exposure IRS Grid
-        MonteCarloSimulation<ErfInvGaussianRandomGenerator, HJMStochasticProcess, InterestRateSwap> mc_engine(payOff, erfinv, hjm_sde, phi_random, simN);
+        MonteCarloSimulation<VSLRNGRandomGenerator, HJMStochasticProcess, InterestRateSwap> mc_engine(payOff, vsl_gaussian, hjm_sde, &phi_random[0], simN);
         mc_engine.calculate(exposures, duration);
 
         // Calculate Statistics max, median, quartiles, 97.5th percentile on exposures
@@ -152,7 +153,7 @@ int main() {
         // Calculate The Unilateral CVA - Credit Value Adjustment Metrics Calculation.
         // For two conterparties A - B. Counterparty A want to know how much is loss in a contract due to B defaulting
         ExpectedExposureTermStructure expectedExposureCurve(pricing_points,expected_exposure, expiry);
-        double cva = calculate_cva(recovery, yieldCurve, expectedExposureCurve, survivalProbabilityCurve, pricing_points, expiry);
+        double cva = calculate_cva(recovery, yieldCurve, expected_exposure, survivalProbabilityCurve, pricing_points, expiry);
 
         std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << duration << std::endl;
 
