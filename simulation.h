@@ -61,6 +61,7 @@ private:
     VSLStreamStatePtr stream;
 };
 
+
 /*
  * (Musiela Parameterisation HJM) We simulate f(t+dt)=f(t) + dfbar  where SDE dfbar =  m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt  and phi ~ N(0,1)
  */
@@ -177,10 +178,9 @@ public:
      */
     void pricePayOff(std::vector<double> &exposure) {
         HJMYieldCurveTermStructure yieldCurve(stochasticProcess.fwd_rates, payOff.expiry, dt, payOff.dtau);
-        double reference_day = payOff.pricing_points[1];
         int pricing_point = 0;
-        for (double reference_day = payOff.pricing_points[1]; reference_day < payOff.expiry; reference_day += payOff.dtau) {
-            VanillaInterestRateSwapPricer pricer(reference_day, payOff, yieldCurve);
+        for (double reference_day = 0.0; reference_day < payOff.expiry - payOff.dtau; reference_day += payOff.dtau) {
+            VanillaInterestRateSwapPricer pricer(reference_day, reference_day + payOff.dtau, payOff, yieldCurve);
             exposure[pricing_point] = pricer.price();
             pricing_point++;
         }

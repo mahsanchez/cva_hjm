@@ -60,14 +60,14 @@ void reduce(std::vector<double>& expected_exposure, std::vector<std::vector<doub
         for (int i = 0; i < simN; i++) {
             sum += std::max(exposures[i][t], 0.0);
         }
-        expected_exposure[t] = sum /(double)simN;
+        expected_exposure[t] = (1/(double)simN) * sum;
     }
 }
 
 /*
  * Risk Factor Simulation Grid Matrix MAX_SIM x MAX_TENOR double array
  */
-const int MAX_SIM = 10000;
+const int MAX_SIM = 20000;
 const int MAX_TENOR = 51;
 const double MAX_EXPIRY = 10.0;
 const double DTAU = 0.5;
@@ -117,7 +117,7 @@ int main() {
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
 
     // Interest Rate Swap Instrument
-    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.01, 10.0, 0.5);
+    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.04, 10.0, 0.5);
 
     // Gaussian Random Number Generator
     ErfInvGaussianRandomGenerator erfinv;
@@ -148,7 +148,7 @@ int main() {
         reduce(expected_exposure, exposures, simulation_points, simN);
 
         // Report Expected Exposure Profile Curve
-        //display_curve(expected_exposure);
+        display_curve(expected_exposure, "Expected Exposure");
 
         // Calculate The Unilateral CVA - Credit Value Adjustment Metrics Calculation.
         // For two conterparties A - B. Counterparty A want to know how much is loss in a contract due to B defaulting

@@ -148,8 +148,8 @@ public:
 
     // discount factor at time t2 as seem from time reference_day
     double discount(double reference_day, double t) {
-        int simulation = reference_day/dt;
-        int tenor = t/dtau;
+        int tenor = reference_day/dtau;
+        int simulation = (int) (t/dt);
         double sum = 0.0;
         for (int s = 0; s < simulation; s++) {
             sum += fwds[s][tenor];
@@ -161,9 +161,10 @@ public:
     // Forward Libor Rate as  factor at time t2 as seem L(t; t1, t2)
     double forwardLibor(double reference_day, double t, double t2) {
         int simulation = reference_day/dt;
-        int tenor = t/dtau + 1;
+        int tenor = t2/dtau;
         double r = fwds[simulation][tenor];
-        double libor = 1.0/dtau*(std::exp(r*dtau)-1.0);
+        double libor = 1.0/dtau;
+        libor *= (std::exp(r*dtau)-1.0);
         return libor;
     }
 
@@ -188,25 +189,39 @@ private:
 
 class VanillaInterestRateSwapPricer { //InterestRateSwap
 public:
-    VanillaInterestRateSwapPricer(double reference_day_, InterestRateSwap& irs_,  HJMYieldCurveTermStructure & _yieldCurve) :
-    reference_day(reference_day_), irs(irs_), yieldCurve(_yieldCurve)
+    VanillaInterestRateSwapPricer(double reference_day_, double start_day_, InterestRateSwap& irs_,  HJMYieldCurveTermStructure & _yieldCurve) :
+    reference_day(reference_day_), start_day(start_day_), irs(irs_), yieldCurve(_yieldCurve)
     {
           calculate();
     };
 
-    void calculate() {
+    double floatingLeg() {
         double price = 0.0;
-        double dtau = 0.5;
-
-        for (double day = reference_day; day < irs.expiry; day += dtau) {
+        for (double day = start_day; day < irs.expiry ; day += irs.dtau) {
             double t2 = day;
-            double t1 = day - dtau;
-            double sum = (yieldCurve.forwardLibor(reference_day, t1, t2) - irs.K);
-            sum *= t2;
-            sum *= yieldCurve.discount(reference_day, t2);
-            price = sum;
+            double t1 = day - irs.dtau;
+            double sum = irs.dtau;
+            sum *= yieldCurve.forwardLibor(reference_day, t1, t2);
+            sum *= yieldCurve.discount(reference_day, day);
+            price += sum;
         }
-       npv = price;
+        return price;
+    }
+
+    double fixedLeg() {
+        double price = 0.0;
+        for (double day = start_day; day < irs.expiry ; day += irs.dtau) {
+            double sum = irs.dtau;
+            sum *= irs.K;
+            sum *= yieldCurve.discount(reference_day, day);
+            price += sum;
+        }
+        return price;
+    }
+
+    void calculate() {
+        npv = floatingLeg() - fixedLeg();
+        npv *= irs.notional;
     }
 
     double price() {
@@ -216,6 +231,7 @@ public:
 private:
     InterestRateSwap& irs;
     double reference_day;
+    double start_day;
     double npv = 0.0;
     HJMYieldCurveTermStructure &yieldCurve;
 };
