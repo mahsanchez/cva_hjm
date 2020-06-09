@@ -1,1 +1,16 @@
 
+References
+
+[0] Counterparty Credit Risk and CVA. Mathworks. https://de.mathworks.com/help/fininst/examples/counterparty-credit-risk-and-cva.html
+
+[1] Pykhtin, Michael, and Steven Zhu, A Guide to Modeling Counterparty Credit Risk, GARP, July/August 2007, issue 37, pp. 16-22.
+
+[2] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
+
+[3] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
+
+[4] Paul Willmot Introduces Quantitative Finance. Paul Willmot
+
+[5] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
+
+[6] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
