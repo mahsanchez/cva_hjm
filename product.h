@@ -197,9 +197,9 @@ public:
 
     double floatingLeg() {
         double price = 0.0;
-        for (double day = start_day; day < irs.expiry ; day += irs.dtau) {
-            double t2 = day;
-            double t1 = day - irs.dtau;
+        for (double day = reference_day; day < irs.expiry ; day += irs.dtau) {
+            double t2 = day + irs.dtau;
+            double t1 = day;
             double sum = irs.dtau;
             sum *= yieldCurve.forwardLibor(reference_day, t1, t2);
             sum *= yieldCurve.discount(reference_day, day);

@@ -58,7 +58,7 @@ void reduce(std::vector<double>& expected_exposure, std::vector<std::vector<doub
     for (int t = 0; t < timepoints_size; t++) {
         double sum = 0.0;
         for (int i = 0; i < simN; i++) {
-            sum += std::max(exposures[i][t], 0.0);
+            sum += exposures[i][t];
         }
         expected_exposure[t] = (1/(double)simN) * sum;
     }
@@ -117,7 +117,7 @@ int main() {
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
 
     // Interest Rate Swap Instrument
-    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.04, 10.0, 0.5);
+    InterestRateSwap payOff(pricing_points, floating_schedule,  fixed_schedule, 10, 0.05, 10.0, 0.5);
 
     // Gaussian Random Number Generator
     ErfInvGaussianRandomGenerator erfinv;

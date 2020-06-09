@@ -181,7 +181,7 @@ public:
         int pricing_point = 0;
         for (double reference_day = 0.0; reference_day < payOff.expiry - payOff.dtau; reference_day += payOff.dtau) {
             VanillaInterestRateSwapPricer pricer(reference_day, reference_day + payOff.dtau, payOff, yieldCurve);
-            exposure[pricing_point] = pricer.price();
+            exposure[pricing_point] = std::max(pricer.price(), 0.0);
             pricing_point++;
         }
 #if DEBUG
