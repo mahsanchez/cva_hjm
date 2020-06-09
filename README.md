@@ -11,7 +11,9 @@ Fixed The Exposure Calculation profile for a given Interest Rate Swap Mark to Ma
 
 Added new dissertation notes with the Reference used during the study [09/06/2020]
 
-TODO Estimate the stddev and confidence interval for simulations
+TODO - Estimate the stddev and confidence interval for simulations
+
+TODO - Apply a variance reduction method to speed up the MC convergence for the CVA value
 
 TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array 
 
