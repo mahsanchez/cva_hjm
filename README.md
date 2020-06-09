@@ -7,6 +7,12 @@ Use boost function boost::math::erf_inv to generate gaussian variates based on a
 
 Use Intel MKL to generate gaussian variates based on a merssene twister uniform random generator [07/06/2020]
 
-TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array [03/06/2020]
+Fixed The Exposure Calculation profile for a given Interest Rate Swap Mark to Market [09/06/2020]
 
-TODO - Test MonteCarlo Convergence for the CVA IRS value [03/06/2020]
+Added new dissertation notes with the Reference used during the study [09/06/2020]
+
+TODO Estimate the stddev and confidence interval for simulations
+
+TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array 
+
+TODO - Test MonteCarlo Convergence for the CVA IRS value 
