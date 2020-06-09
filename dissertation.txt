@@ -14,3 +14,5 @@ References
 [5] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
 
 [6] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
+
+[7] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere
