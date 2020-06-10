@@ -15,6 +15,8 @@ TODO - Estimate the stddev and confidence interval for simulations
 
 TODO - Apply a variance reduction method to speed up the MC convergence for the CVA value
 
+TODO - Transpose the Exposure matrix and check for memory bandwidth usage improvement
+
 TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array 
 
 TODO - Test MonteCarlo Convergence for the CVA IRS value 
