@@ -11,20 +11,21 @@ References
 
 [4] Paul Willmot Introduces Quantitative Finance. Paul Willmot
 
-[5] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
+[5] Jaeckel, Peter. Monte Carlo Methods in Finance
 
-[6] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
+[6] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
 
-[7] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere
+[7] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
 
-[8] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
+[8] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere
 
-[9] Ian Lerche and Brett S. Mudford. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
+[9] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
 
-[9] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
+[10] Ian Lerche and Brett S. Mudford. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
 
-[10] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+[11] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
 
-[11] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
+[12] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
 
-[12] Jaeckel, Peter. Monte Carlo Methods in Finance
+[13] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
+
