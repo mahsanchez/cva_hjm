@@ -11,19 +11,19 @@ References
 
 [5] Jaeckel, Peter. Monte Carlo Methods in Finance
 
-[6] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
+[6] Willmot,Paul. Introduces Quantitative Finance. Paul Willmot
 
-[7] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
+[7] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
 
-[8] Willmot,Paul. Introduces Quantitative Finance. Paul Willmot
+[8] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
 
-[9] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
+[9] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
 
-[10] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
+[10] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
 
-[11] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere https://www5.in.tum.de/pub/mudigere09.pdf
+[11] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
 
-[12] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
+[12] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere https://www5.in.tum.de/pub/mudigere09.pdf
 
 [13] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
 
