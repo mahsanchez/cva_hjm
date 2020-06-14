@@ -1,3 +1,9 @@
+Introduction 
+
+NVIDIA GPU Hardware 
+
+CUDA Programming Model
+
 Monte Carlo Simulation (MC)
 
 Financial problems are usually modelled using Stochastic Differential Equations (SDE). Most of the SDE
@@ -21,26 +27,30 @@ Key Issues arising in Monte Carlo Simulation
 
 Fixed Income Markets
 
-Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework 
+A Case of Study Credit Valuation Adjusment for a portfolio of one Interest Rate Swap trade
 
-Counterparty Credit Risk 
+  Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework 
 
-Expected Exposure
+  Counterparty Credit Risk 
 
-step 1 - HJM Model Calibration
-step 2 - Evolve Risk Factor in the Future using MC Simulation
-step 3 - Generate the Discount Factors and Forward Rates on each pricing point
-step 4 - Perform IRS Mark to Market across pricing points
-step 5 - Generate an Exposure Profile
-step 6 - Run 2 through 6 N times ( N > 1000)
-step 7 - Calculate the Expected Exposure profile averaging  N-Exposure Curves across all simulation points
-step 8 - Run 2 through 6 N times ( N >> 1000 ) 
-step 9 - Calculate the Expected Exposure profile averaging  N-Exposure Curves across all simulation points
-step 10 - Perform a difference across simulation point for the EE calculated obtained in step 7 and step 9
-step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
-step 12 - Repeat step 8 through 9 till the simulation converge
+  Expected Exposure
+
+    step 1 - HJM Model Calibration
+    step 2 - Evolve Risk Factor in the Future using MC Simulation
+    step 3 - Generate the Discount Factors and Forward Rates on each pricing point
+    step 4 - Perform IRS Mark to Market across pricing points
+    step 5 - Generate an Exposure Profile
+    step 6 - Run 2 through 6 N times ( N > 1000)
+    step 7 - Calculate the Expected Exposure profile averaging  N-Exposure Curves across all simulation points
+    step 8 - Run 2 through 6 N times ( N >> 1000 ) 
+    step 9 - Calculate the Expected Exposure profile averaging  N-Exposure Curves across all simulation points
+    step 10 - Perform a difference across simulation point for the EE calculated obtained in step 7 and step 9
+    step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
+    step 12 - Repeat step 8 through 9 till the simulation converge
                                 
-Counterparty Value Adjustment (CVA)
+  Counterparty Value Adjustment (CVA)
+  
+Accelerated NVIDIA CUDA implementation
 
 Benchmark GPU Accelerated solutions against CPU
 
