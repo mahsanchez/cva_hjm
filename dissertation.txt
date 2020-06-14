@@ -15,7 +15,7 @@ Key Issues arising in Monte Carlo Simulation
 - Uniform/Gaussian Random generators
 - Large floating point summation
 - (Speeding up Convergence) using Variance Reduction
-- Long execution time (due to large number of required sampling for convergence)
+- Hardware Acceleration to improve Long execution time (due to large number of required sampling for convergence)
 
 Fixed Income Markets
 
