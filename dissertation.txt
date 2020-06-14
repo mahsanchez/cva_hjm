@@ -1,15 +1,20 @@
 Introduction 
 
 NVIDIA GPU Hardware 
+Von Neumann Architecture CPU Architecture vs GPU Architecture
+SIMT vs SIMD Execution Model (Vectorization)
+Memory Distribution
 
 CUDA Programming Model
--SIMT vs SIMD Execution Model (Vectorization)
+-Intro to Prgoramming model (https://devblogs.nvidia.com/even-easier-introduction-cuda/)
 -Block/Grid Partition
--Coalesced Data Access
--Shared Memory Access
+-Memory Bandwidtdh : Coalesced Data Access
+-Memory Bandwidtdh : Shared Memory Access
 -Synchronization
 -Warp Divergence
 -Latency Hiding (Multi Threading over caching)
+-Ocupancy
+-Streams
 
 Monte Carlo Simulation (MC)
 
@@ -83,15 +88,17 @@ References
 
 [9] Joshi, Mark. C++ Design Pattern and Derivatives Pricing. 2nd Edition. 
 
-[10] Wen Wei and Kirk. Programming Massively Parallel Processors. 3rd edition.
+[10] Harris, Mark. An even easy introduction to CUDA. https://devblogs.nvidia.com/even-easier-introduction-cuda/
 
-[11] Kindratenko, Vlodymyr. Numerical Computations with GPUs. chapter 12, 13, 14
+[11] Wen Wei and Kirk. Programming Massively Parallel Processors. 3rd edition.
 
-[12] Mudigere, Dheevatsa. Data access optimized applications on the GPU using NVIDIA CUDA. https://www5.in.tum.de/pub/mudigere09.pdf
+[12] Kindratenko, Vlodymyr. Numerical Computations with GPUs. chapter 12, 13, 14
 
-[13] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
+[13] Mudigere, Dheevatsa. Data access optimized applications on the GPU using NVIDIA CUDA. https://www5.in.tum.de/pub/mudigere09.pdf
 
-[14] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+[14] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
+
+[15] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
 
 [15] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
 
