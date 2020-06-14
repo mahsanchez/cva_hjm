@@ -36,7 +36,7 @@ A Case of Study Credit Valuation Adjusment for a portfolio of one Interest Rate 
 
   Interest Rate Swap
 
-  Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework 
+  Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework using Monte Carlo
 
   Counterparty Credit Risk 
 
