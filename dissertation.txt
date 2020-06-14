@@ -11,7 +11,7 @@ References
 
 [5] Jaeckel, Peter. Monte Carlo Methods in Finance
 
-[6] Willmot,Paul. Introduces Quantitative Finance. Paul Willmot
+[6] Willmot,Paul. Introduces Quantitative Finance. 
 
 [7] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
 
