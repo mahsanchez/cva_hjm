@@ -43,9 +43,9 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
 
   Pricing an Interest Rate Swap product under Heath-Jarrow-Morton framework using Monte Carlo
 
-  Counterparty Credit Risk 
+  Credit Valuation Adjustment (CVA)
 
-  Expected Exposure
+  CPU Implementation
 
     step 1 - HJM Model Calibration
     step 2 - Evolve Risk Factor in the Future using MC Simulation
@@ -59,10 +59,8 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
     step 10 - Perform a difference across simulation point for the EE calculated obtained in step 7 and step 9
     step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
     step 12 - Repeat step 8 through 9 till the simulation converge
-                                
-  Credit Valuation Adjustment (CVA)
   
-  Accelerated NVIDIA CUDA GPU implementaton
+  GPU implementaton
 
   Benchmark GPU Accelerated solutions against CPU
 
