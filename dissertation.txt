@@ -1,3 +1,21 @@
+Monte Carlo Simulation
+
+Financial problems are usually modelled using Stochastic Differential Equations (SDE). Most of the SDE
+problems have a high dimensions integration problems and does not have a closed form solution. Hence, 
+numerical methods in the area of stochastic simulations based on sampling methods 
+basically simulate independent realizations of the stochastic phenomenon under consideration and then to compute an
+estimate for the expectation of interest via an appropriate estimator obtained from independent samples.
+
+In other words, one runs N independent computer experiments replicating the random variable Z, and then computes z from the sample. Use of random sampling or a method for computing a expectation is often called the Monte Carlo method. The estimator of z = E[Z] is an average of independent identical distributed copies of Z. Based on the Law of Large Numbers
+for a given N < +oo the stocastic simulation converge to z = 1/n sum[Z] and for N large enough hold that 
+En-1[Z] - En[Z] < epsilon. The epsilon value determine the converge criteria for the numerical methods and depends 
+on the accuracy required in the specific problem context.
+
+Key Issues arising in Monte Carlo Simulation
+- Uniform/Gaussian Random generators
+- Large floating point summation
+- (Speeding up Convergence) using Variance Reduction
+- Long execution time (due to large number of required sampling for convergence)
 
 References
 
