@@ -1,9 +1,9 @@
 
 References
 
-[0] Counterparty Credit Risk and CVA. Mathworks. https://de.mathworks.com/help/fininst/examples/counterparty-credit-risk-and-cva.html
-
 [1] Pykhtin, Michael, and Steven Zhu, A Guide to Modeling Counterparty Credit Risk, GARP, July/August 2007, issue 37, pp. 16-22.
+
+[2] Counterparty Credit Risk and CVA. Mathworks. https://de.mathworks.com/help/fininst/examples/counterparty-credit-risk-and-cva.html
 
 [3] Glasserman, Paul. Importance Sampling in the Heath-Jarrow-Morton framework. https://www0.gsb.columbia.edu/faculty/pglasserman/Other/ghs_jderiv.pdf
 
