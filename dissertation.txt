@@ -39,9 +39,13 @@ Key Issues arising in Monte Carlo Simulation
 
 Case of Study Accelerating the calculation of IRS CVA with GPU
 
-  Interest Rate Swap
+  Interest Rate Swap (Pricing)
 
-  Pricing an Interest Rate Swap product under Heath-Jarrow-Morton framework using Monte Carlo
+  Pricing an IRS under Heath-Jarrow-Morton framework using Monte Carlo
+  
+    Instant forward rates is simulate f(t+dt)=f(t) + dfbar where SDE dfbar = m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt 
+    Discount Factors Curve
+    Forward Rate Curve
 
   Credit Valuation Adjustment (CVA)
 
