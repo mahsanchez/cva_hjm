@@ -3,6 +3,13 @@ Introduction
 NVIDIA GPU Hardware 
 
 CUDA Programming Model
+-SIMT vs SIMD Execution Model (Vectorization)
+-Block/Grid Partition
+-Coalesced Data Access
+-Shared Memory Access
+-Synchronization
+-Warp Divergence
+-Latency Hiding (Multi Threading over caching)
 
 Monte Carlo Simulation (MC)
 
@@ -52,11 +59,11 @@ A Case of Study Credit Valuation Adjusment for a portfolio of one Interest Rate 
                                 
   Counterparty Value Adjustment (CVA)
   
-Accelerated NVIDIA CUDA implementation
+  Accelerated NVIDIA CUDA implementation
 
-Benchmark GPU Accelerated solutions against CPU
+  Benchmark GPU Accelerated solutions against CPU
 
-Closing Remarks
+Conclusions
 
 References
 
