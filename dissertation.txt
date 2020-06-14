@@ -3,11 +3,11 @@ References
 
 [1] Pykhtin, Michael, and Steven Zhu, A Guide to Modeling Counterparty Credit Risk, GARP, July/August 2007, issue 37, pp. 16-22.
 
-[2] Counterparty Credit Risk and CVA. Mathworks. https://de.mathworks.com/help/fininst/examples/counterparty-credit-risk-and-cva.html
+[2] Mathworks. Counterparty Credit Risk and CVA. https://de.mathworks.com/help/fininst/examples/counterparty-credit-risk-and-cva.html
 
 [3] Glasserman, Paul. Importance Sampling in the Heath-Jarrow-Morton framework. https://www0.gsb.columbia.edu/faculty/pglasserman/Other/ghs_jderiv.pdf
 
-[4] Ian Lerche and Brett S. Mudford. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
+[4] Lerche, Ian and Mudford, Brett S. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
 
 [5] Jaeckel, Peter. Monte Carlo Methods in Finance
 
@@ -15,15 +15,15 @@ References
 
 [7] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
 
-[8] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
+[8] Savigne, Antoine. Modern Computational Finance, AAD and Parallel Simulations. 
 
-[9] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
+[9] Joshi, Mark. C++ Design Pattern and Derivatives Pricing. 2nd Edition. 
 
-[10] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
+[10] Wen Wei and Kirk. Programming Massively Parallel Processors. 3rd edition.
 
-[11] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
+[11] Kindratenko, Vlodymyr. Numerical Computations with GPUs. chapter 12, 13, 14
 
-[12] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere https://www5.in.tum.de/pub/mudigere09.pdf
+[12] Mudigere, Dheevatsa. Data access optimized applications on the GPU using NVIDIA CUDA. https://www5.in.tum.de/pub/mudigere09.pdf
 
 [13] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
 
