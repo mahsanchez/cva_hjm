@@ -62,9 +62,12 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
   
   GPU implementation
   
+  • Use CURAND to generate the Gaussian Variates inside the GPU
   • Simulations in loop are independent: loop can be parallelised 
   • Strategy: carve up the N iterations between our P CPU threads, so that each thread computes N/P iterations
   • Thread safety: have to take care when collecting running sums from P threads at the end (synchronisation?)
+  • Run partial reduction in the GPU
+  • Each thread copy one element of the vector back to the memory cpu
 
   Benchmark GPU Accelerated solutions against CPU
 
