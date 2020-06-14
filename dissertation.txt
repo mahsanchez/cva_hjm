@@ -55,7 +55,7 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
     step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
     step 12 - Repeat step 8 through 9 till the simulation converge
                                 
-  Counterparty Value Adjustment (CVA)
+  Credit Valuation Adjustment (CVA)
   
   Accelerated NVIDIA CUDA GPU implementaton
 
