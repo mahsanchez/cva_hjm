@@ -5,27 +5,29 @@ References
 
 [1] Pykhtin, Michael, and Steven Zhu, A Guide to Modeling Counterparty Credit Risk, GARP, July/August 2007, issue 37, pp. 16-22.
 
-[2] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
+[3] Glasserman, Paul. Importance Sampling in the Heath-Jarrow-Morton framework. https://www0.gsb.columbia.edu/faculty/pglasserman/Other/ghs_jderiv.pdf
 
-[3] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
+[4] Ian Lerche and Brett S. Mudford. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
 
-[4] Paul Willmot Introduces Quantitative Finance. Paul Willmot
+[5] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
 
-[5] Jaeckel, Peter. Monte Carlo Methods in Finance
+[6] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
 
-[6] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
+[7] Paul Willmot Introduces Quantitative Finance. Paul Willmot
 
-[7] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
+[8] Jaeckel, Peter. Monte Carlo Methods in Finance
 
-[8] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere
+[9] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
 
-[9] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
+[10] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
 
-[10] Ian Lerche and Brett S. Mudford. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
+[11] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere
 
-[11] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
+[12] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
 
-[12] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+[13] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
 
-[13] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
+[14] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+
+[15] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
 
