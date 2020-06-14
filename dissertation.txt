@@ -21,7 +21,7 @@ References
 
 [10] Numerical Computations with GPUs. Vlodymyr Kindratenko, chapter 12, 13, 14
 
-[11] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere
+[11] Data access optimized applications on the GPU using NVIDIA CUDA. Dheevatsa Mudigere https://www5.in.tum.de/pub/mudigere09.pdf
 
 [12] Higham, Nicholas J. (2002). Accuracy and Stability of Numerical Algorithms. 2nd Edition. SIAM. pp. 110–123;
 
