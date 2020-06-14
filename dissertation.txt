@@ -38,8 +38,11 @@ step 10 - Perform a difference across simulation point for the EE calculated obt
 step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
 step 12 - Repeat step 8 through 9 till the simulation converge
                                 
-
 Counterparty Value Adjustment (CVA)
+
+Benchmark GPU Accelerated solutions against CPU
+
+Closing Remarks
 
 References
 
