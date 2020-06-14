@@ -16,19 +16,7 @@ CUDA Programming Model
 -Ocupancy
 -Streams
 
-Case of Study Accelerating the calculation of IRS CVA with GPU
-
-  Heath-Jarrow-Morton framework 
-  
-    Instant forward rates is simulate f(t+dt)=f(t) + dfbar where SDE dfbar = m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt 
-    Discount Factors Curve
-    Forward Rate Curve
-    
-  Interest Rate Swap (Pricing) 
-
-  Credit Valuation Adjustment (CVA)
-  
-  Monte Carlo Simulation numerical method
+Monte Carlo Simulation numerical method
 
     Financial problems are usually modelled using Stochastic Differential Equations (SDE). Most of the SDE
     problems have a high dimensions integration problems and does not have a closed form solution. Hence, 
@@ -49,6 +37,18 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
     - Convergence Criteria and Accuracy
     - Hardware Acceleration to improve Long execution time 
 
+Case of Study Accelerating the calculation of IRS CVA with GPU
+
+  Heath-Jarrow-Morton framework 
+  
+    Instant forward rates is simulate f(t+dt)=f(t) + dfbar where SDE dfbar = m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt 
+    Discount Factors Curve
+    Forward Rate Curve
+    
+  Interest Rate Swap (Pricing) 
+
+  Credit Valuation Adjustment (CVA)
+  
   Serial CPU CVA Calculation Implementation
 
     step 1 - HJM Model Calibration
@@ -64,7 +64,7 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
     step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
     step 12 - Repeat step 8 through 9 till the simulation converge
   
-  GPU CVA Calculation implementation
+  GPU accelerated CVA Calculation implementation
   
   • Use CURAND to generate the Gaussian Variates inside the GPU
   • Simulations in loop are independent: loop can be parallelised 
