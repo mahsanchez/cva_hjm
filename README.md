@@ -11,12 +11,14 @@ Fixed The Exposure Calculation profile for a given Interest Rate Swap Mark to Ma
 
 Added new dissertation notes with the Reference used during the study [09/06/2020]
 
+Finished MonteCarlo Convergence for IRS Expected Exposure with a 0.01 accuracy and 4750 simulations on each simulation point.[14/06/2020]
+
 TODO - Estimate the stddev and confidence interval for simulations
 
-TODO - Apply a variance reduction method to speed up the MC convergence for the CVA value
+TODO - Apply a variance reduction method on HJM model for risk factor evolution to speed up the MC convergence
 
 TODO - Transpose the Exposure matrix and check for memory bandwidth usage improvement
 
 TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array 
 
-TODO - Test MonteCarlo Convergence for the CVA IRS value 
+
