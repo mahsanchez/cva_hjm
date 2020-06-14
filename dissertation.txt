@@ -9,13 +9,13 @@ References
 
 [4] Ian Lerche and Brett S. Mudford. How many Monte Carlo simulations do I need to do?https://journals.sagepub.com/doi/pdf/10.1260/014459805776986876
 
-[5] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
+[5] Jaeckel, Peter. Monte Carlo Methods in Finance
 
-[6] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
+[6] Modern Computational Finance, AAD and Parallel Simulations. Antoine Savigne
 
-[7] Willmot,Paul. Introduces Quantitative Finance. Paul Willmot
+[7] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
 
-[8] Jaeckel, Peter. Monte Carlo Methods in Finance
+[8] Willmot,Paul. Introduces Quantitative Finance. Paul Willmot
 
 [9] Programming Massively Parallel Processors. 3rd edition. Kirk and Wen Wei
 
