@@ -34,8 +34,8 @@ Key Issues arising in Monte Carlo Simulation
 - Large number of samplings
 - Large floating point summation
 - (Speeding up Convergence) using Variance Reduction
+- Convergence Criteria and Accuracy
 - Hardware Acceleration to improve Long execution time 
-- Convergence Criteria 
 
 Case of Study Accelerating the calculation of IRS CVA with GPU
 
