@@ -13,7 +13,7 @@ References
 
 [6] C++ Design Pattern and Derivatives Pricing. 2nd Edition. Mark Joshi
 
-[7] Paul Willmot Introduces Quantitative Finance. Paul Willmot
+[7] Willmot,Paul. Introduces Quantitative Finance. Paul Willmot
 
 [8] Jaeckel, Peter. Monte Carlo Methods in Finance
 
