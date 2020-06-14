@@ -16,7 +16,7 @@ CUDA Programming Model
 -Ocupancy
 -Streams
 
-Monte Carlo Simulation (MC)
+Monte Carlo Simulation numerical method
 
 Financial problems are usually modelled using Stochastic Differential Equations (SDE). Most of the SDE
 problems have a high dimensions integration problems and does not have a closed form solution. Hence, 
