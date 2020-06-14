@@ -45,7 +45,7 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
     Discount Factors Curve
     Forward Rate Curve
     
-  Interest Rate Swap (Pricing) using Monte Carlo 
+  Interest Rate Swap (Pricing) 
 
   Credit Valuation Adjustment (CVA)
 
