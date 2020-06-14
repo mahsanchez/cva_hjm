@@ -21,4 +21,8 @@ TODO - Transpose the Exposure matrix and check for memory bandwidth usage improv
 
 TODO - Modify YieldCurve calculation DF(t, T) and ForwardRates F(t;t, T). Data must be accessed using a linearized array 
 
+TODO - Implement a CUDA Accelerated Kernel for HJM simulation
+
+TODO - Benchmark the solution Measure Performance
+
 
