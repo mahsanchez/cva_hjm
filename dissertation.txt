@@ -32,11 +32,11 @@ Key Issues arising in Monte Carlo Simulation
 - Hardware Acceleration to improve Long execution time 
 - Convergence Criteria 
 
-A Case of Study Credit Valuation Adjusment for a portfolio of one Interest Rate Swap trade
+Case of Study Accelerating the calculation of IRS CVA with GPU
 
   Interest Rate Swap
 
-  Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework using Monte Carlo
+  Pricing an Interest Rate Swap product under Heath-Jarrow-Morton framework using Monte Carlo
 
   Counterparty Credit Risk 
 
@@ -57,7 +57,7 @@ A Case of Study Credit Valuation Adjusment for a portfolio of one Interest Rate 
                                 
   Counterparty Value Adjustment (CVA)
   
-  Accelerated NVIDIA CUDA implementation
+  Accelerated NVIDIA CUDA GPU implementaton
 
   Benchmark GPU Accelerated solutions against CPU
 
