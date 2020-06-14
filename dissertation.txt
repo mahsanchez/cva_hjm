@@ -25,9 +25,11 @@ Key Issues arising in Monte Carlo Simulation
 - Hardware Acceleration to improve Long execution time 
 - Convergence Criteria 
 
-Fixed Income Markets
-
 A Case of Study Credit Valuation Adjusment for a portfolio of one Interest Rate Swap trade
+
+  Fixed Income Model
+
+  Interest Rate Swap
 
   Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework 
 
