@@ -16,27 +16,6 @@ CUDA Programming Model
 -Ocupancy
 -Streams
 
-Monte Carlo Simulation numerical method
-
-Financial problems are usually modelled using Stochastic Differential Equations (SDE). Most of the SDE
-problems have a high dimensions integration problems and does not have a closed form solution. Hence, 
-Monte Carlo numerical methods in the area of stochastic simulations based on sampling methods 
-basically simulate independent realizations of the stochastic phenomenon under consideration and then to compute an
-estimate for the expectation of interest via an appropriate estimator obtained from independent samples.
-
-In other words, one runs N independent computer experiments replicating the random variable Z, and then computes z from the sample. Use of random sampling or a method for computing a expectation is often called the Monte Carlo method. The estimator of z = E[Z] is an average of independent identical distributed copies of Z. Based on the Law of Large Numbers
-for a given N < +oo the stocastic simulation converge to z = 1/n sum[Z] and for N large enough hold that 
-En-1[Z] - En[Z] < epsilon. The epsilon value determine the converge criteria for the numerical methods and depends 
-on the accuracy required in the specific problem context.
-
-Key Issues arising in Monte Carlo Simulation
-- Uniform/Gaussian Random generators
-- Large number of samplings
-- Large floating point summation
-- (Speeding up Convergence) using Variance Reduction (slow convergence rate)
-- Convergence Criteria and Accuracy
-- Hardware Acceleration to improve Long execution time 
-
 Case of Study Accelerating the calculation of IRS CVA with GPU
 
   Heath-Jarrow-Morton framework 
@@ -48,8 +27,29 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
   Interest Rate Swap (Pricing) 
 
   Credit Valuation Adjustment (CVA)
+  
+  Monte Carlo Simulation numerical method
 
-  Serial CPU Implementation
+    Financial problems are usually modelled using Stochastic Differential Equations (SDE). Most of the SDE
+    problems have a high dimensions integration problems and does not have a closed form solution. Hence, 
+    Monte Carlo numerical methods in the area of stochastic simulations based on sampling methods 
+    basically simulate independent realizations of the stochastic phenomenon under consideration and then to compute an
+    estimate for the expectation of interest via an appropriate estimator obtained from independent samples.
+
+    In other words, one runs N independent computer experiments replicating the random variable Z, and then computes z from the sample. Use of random sampling or a method for computing a expectation is often called the Monte Carlo method. The estimator of z = E[Z] is an average of independent identical distributed copies of Z. Based on the Law of Large Numbers
+    for a given N < +oo the stocastic simulation converge to z = 1/n sum[Z] and for N large enough hold that 
+    En-1[Z] - En[Z] < epsilon. The epsilon value determine the converge criteria for the numerical methods and depends 
+    on the accuracy required in the specific problem context.
+
+    Key Issues arising in Monte Carlo Simulation
+    - Uniform/Gaussian Random generators
+    - Large number of samplings
+    - Large floating point summation
+    - (Speeding up Convergence) using Variance Reduction (slow convergence rate)
+    - Convergence Criteria and Accuracy
+    - Hardware Acceleration to improve Long execution time 
+
+  Serial CPU CVA Calculation Implementation
 
     step 1 - HJM Model Calibration
     step 2 - Evolve Risk Factor in the Future using MC Simulation
@@ -64,7 +64,7 @@ Case of Study Accelerating the calculation of IRS CVA with GPU
     step 11 - Each for each simulation point the difference is less than a threshold then stop simulation
     step 12 - Repeat step 8 through 9 till the simulation converge
   
-  GPU implementation
+  GPU CVA Calculation implementation
   
   • Use CURAND to generate the Gaussian Variates inside the GPU
   • Simulations in loop are independent: loop can be parallelised 
