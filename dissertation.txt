@@ -1,20 +1,20 @@
 Introduction 
 
 NVIDIA GPU Hardware 
-Von Neumann Architecture CPU Architecture vs GPU Architecture
-SIMT vs SIMD Execution Model (Vectorization)
-Memory Distribution
+    Von Neumann Architecture CPU Architecture vs GPU Architecture
+    SIMT vs SIMD Execution Model (Vectorization)
+    Memory Distribution
 
 CUDA Programming Model
--Intro to Prgoramming model (https://devblogs.nvidia.com/even-easier-introduction-cuda/)
--Block/Grid Partition
--Memory Bandwidtdh : Coalesced Data Access
--Memory Bandwidtdh : Shared Memory Access
--Synchronization
--Warp Divergence
--Latency Hiding (Multi Threading over caching)
--Ocupancy
--Streams
+    -Intro to Prgoramming model (https://devblogs.nvidia.com/even-easier-introduction-cuda/)
+    -Block/Grid Partition
+    -Memory Bandwidtdh : Coalesced Data Access
+    -Memory Bandwidtdh : Shared Memory Access
+    -Synchronization
+    -Warp Divergence
+    -Latency Hiding (Multi Threading over caching)
+    -Ocupancy
+    -Streams
 
 Monte Carlo Simulation numerical method
 
