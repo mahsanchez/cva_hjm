@@ -19,7 +19,7 @@ Key Issues arising in Monte Carlo Simulation
 
 Fixed Income Markets
 
-Pricing an Interest Rate Swap financial product on HJM Model 
+Pricing an Interest Rate Swap financial product under Heath-Jarrow-Morton framework 
 
 Counterparty Credit Risk 
 
