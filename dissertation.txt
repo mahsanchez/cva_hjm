@@ -39,13 +39,13 @@ Key Issues arising in Monte Carlo Simulation
 
 Case of Study Accelerating the calculation of IRS CVA with GPU
 
-  Heath-Jarrow-Morton framework using Monte Carlo
+  Heath-Jarrow-Morton framework 
   
     Instant forward rates is simulate f(t+dt)=f(t) + dfbar where SDE dfbar = m(t)*dt+SUM(Vol_i*phi*SQRT(dt))+dF/dtau*dt 
     Discount Factors Curve
     Forward Rate Curve
     
-  Interest Rate Swap (Pricing)  
+  Interest Rate Swap (Pricing) using Monte Carlo 
 
   Credit Valuation Adjustment (CVA)
 
