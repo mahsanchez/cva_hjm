@@ -6,9 +6,6 @@
 #include <iterator>
 #include <iomanip>
 #include <random>
-#include <boost/math/special_functions/erf.hpp>
-#include "mkl_vsl.h"
-
 #include "product.h"
 
 /*

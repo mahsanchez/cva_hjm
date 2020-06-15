@@ -5,6 +5,52 @@
 #include <map>
 #include <cmath>
 #include <algorithm>
+#include <boost/math/special_functions/erf.hpp>
+
+#include "mkl.h"
+#include "mkl_vsl.h"
+
+
+// Summation
+double recursive_summation(double *f, int N) {
+    double sum = 0.0;  // the sum being accumulated
+    for (int i = 0; i < N; i++) {
+        sum += f[i];
+    }
+    return sum;
+}
+
+double kahan_summation(double *f, int N) {
+    double sum = 0.0;  // the sum being accumulated
+    double c = 0.0;    // the compensation for lost precision
+    double y, t;
+    for (int i = 0; i < N; i++) {
+        y = f[i] - c;
+        t = sum + y;
+        c = (t - sum) - y;
+        sum = t;
+    }
+    return sum;
+}
+
+double cblas_summation(double *f, int N, int stride = 1) {
+    return cblas_dasum(N, f, stride );
+}
+
+double pairwise_summation(double *f, int N) {
+    return 0.0;
+}
+
+/**
+ * percentile
+ */
+
+double percentile(std::vector<double> &vectorIn, double percent)
+{
+    auto nth = vectorIn.begin() + (percent*vectorIn.size())/100;
+    std::nth_element(vectorIn.begin(), nth, vectorIn.end());
+    return *nth;
+}
 
 /*
  * Prefix Sum

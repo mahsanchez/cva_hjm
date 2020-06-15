@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <iterator>
+#include <cmath>
 
 //#include "calibration.h"
 #include "simulation.h"
@@ -48,26 +49,10 @@ std::vector<double> spreads = {
 };
 
 
-
-
-/*
- *  Reduction to produce the expected exposure profile EE[t] curve for the IRS
- * Expected Exposure  EPE(t) = 𝔼 [max(V , 0)|Ft]
-*/
-void reduce(std::vector<double>& expected_exposure, std::vector<std::vector<double>>& exposures, int timepoints_size, int simN) {
-    for (int t = 0; t < timepoints_size; t++) {
-        double sum = 0.0;
-        for (int i = 0; i < simN; i++) {
-            sum += exposures[i][t];
-        }
-        expected_exposure[t] = (1/(double)simN) * sum;
-    }
-}
-
 /*
  * Risk Factor Simulation Grid Matrix MAX_SIM x MAX_TENOR double array
  */
-const int MAX_SIM = 20000;
+const int MAX_SIM = 40000;
 const int MAX_TENOR = 51;
 const double MAX_EXPIRY = 10.0;
 const double DTAU = 0.5;
@@ -80,6 +65,42 @@ std::vector<std::vector<double>> exposures(MAX_SIM, std::vector<double>(MAX_EXPI
 
 // Gaussian Randoms
 std::vector<double> phi_random(MAX_SIM*3, 0.0);
+
+// Temporal buffer
+std::vector<double> simulated_exposure(MAX_SIM, 0.0);
+
+/*
+ *  Reduction to produce the expected exposure profile EE[t] curve for the IRS
+ * Expected Exposure  EPE(t) = 𝔼 [max(V , 0)|Ft]
+*/
+void reduce(std::vector<double>& expected_exposure, std::vector<std::vector<double>>& exposures, int timepoints_size, int simN /*, summation_algorithm */) {
+    const double term = 1.0/(double)simN;
+
+    for (int t = 0; t < timepoints_size; t++) {
+        double sum = 0.0;
+        for (int simulation = 0; simulation < simN; simulation++) {
+            simulated_exposure[simulation] = exposures[simulation][t];
+        }
+        expected_exposure[t] = term * cblas_summation(&simulated_exposure[0], simN);
+    }
+}
+
+/*
+ * Expected Exposure Convergence
+ */
+bool check_convergence(std::vector<double>& expected_exposure, std::vector<double>& expected_exposure2, double threshold = 0.002) {
+    int counter = 0;
+    for (int i = 0; i < expected_exposure.size(); i++) {
+        double estimated_error = std::abs(expected_exposure[i] - expected_exposure2[i]);
+        if (estimated_error <= threshold) {
+            counter = counter + 1;
+        }
+#if DEBUG_EE_CONVERGENCE
+        std::cout << std::setprecision(6)<< std::fixed << expected_exposure[i] << " " << expected_exposure2[i] << " " << estimated_error << std::endl;
+#endif
+    }
+    return (counter == expected_exposure.size());
+}
 
 /*
  * Main Entry Point
@@ -112,6 +133,7 @@ int main() {
 
     // Expected Exposure Profile
     std::vector<double> expected_exposure(simulation_points, 0.0);
+    std::vector<double> expected_exposure2(simulation_points, 0.0);
 
     // copy the spot rates as the first curve inside fwd_rates
     std::copy(spot_rates.begin(), spot_rates.end(), fwd_rates[0].begin());
@@ -123,6 +145,9 @@ int main() {
     ErfInvGaussianRandomGenerator erfinv;
     NormalRandomGenerator normal_gaussian;
     VSLRNGRandomGenerator vsl_gaussian;
+
+    // Expected Exposure Convergence Threshold
+    const double threshold = 0.0001;
 
     // Simulation header ouput
     std::cout <<  "CVA" << "    " << "Iterations" << "    " << "Execution Time(s)" << std::endl;
@@ -144,11 +169,13 @@ int main() {
         // Calculate Potential Future Exposure (PFE) at the 97.5th percentile and media of the Positive EE
 
         // Calculate Expected Exposure (EE)  EPE(t) = 𝔼 [max(V , 0)|Ft]
-        // Use reduction to generate across timepoints the expected exposure profile for the IRS
+        // Use reduction to generate the expectation on the distribution across timepoints the expected exposure profile for the IRS
         reduce(expected_exposure, exposures, simulation_points, simN);
 
         // Report Expected Exposure Profile Curve
+#if DEBUG_EE
         display_curve(expected_exposure, "Expected Exposure");
+#endif
 
         // Calculate The Unilateral CVA - Credit Value Adjustment Metrics Calculation.
         // For two conterparties A - B. Counterparty A want to know how much is loss in a contract due to B defaulting
@@ -157,8 +184,12 @@ int main() {
 
         std::cout << std::setprecision(6)<< std::fixed << cva << " " << simN << " " << duration << std::endl;
 
-        // Compare the exposures at maximum with percentiles consider
-        // Sensitivity Analysis considering the very small and negative rates
+        // Expected Exposure Convergence
+        bool convergence = check_convergence(expected_exposure, expected_exposure2, threshold);
+        if (convergence == true) {
+            std::cout << std::setprecision(6)<< std::fixed << "convergence++ at iteration"<< simN << std::endl;
+        }
+        std::copy(expected_exposure.begin(), expected_exposure.end(), expected_exposure2.begin());
     }
 
 

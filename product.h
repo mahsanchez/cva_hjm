@@ -12,6 +12,8 @@
 
 #define DEBUG 0
 #define DEBUG_HJM 0
+#define DEBUG_EE 0
+#define DEBUG_EE_CONVERGENCE 10
 
 using namespace std;
 
