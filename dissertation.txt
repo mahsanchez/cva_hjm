@@ -105,9 +105,11 @@ References
 
 [13] Mudigere, Dheevatsa. Data access optimized applications on the GPU using NVIDIA CUDA. https://www5.in.tum.de/pub/mudigere09.pdf
 
-[14] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
+[14] Podlozhnyuk, Victor and Harris, Mark. Monte Carlo Option Pricing. http://developer.download.nvidia.com/compute/cuda/1_1/Website/projects/MonteCarlo/doc/MonteCarlo.pdf
 
-[15] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+[15] NVIDIA Curand User Guide. https://docs.nvidia.com/cuda/curand/index.html
 
-[15] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
+[16] NVIDIA CUDA C Programming Guide. https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+
+[17] NVIDIA CUDA Best Practices Guide. https://docs.nvidia.com/cuda/cuda-c-best-practices-guide/index.html
 
