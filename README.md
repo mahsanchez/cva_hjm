@@ -1,3 +1,14 @@
+Skills Gained (Andrew Green)
+
+* Leading the development of a new XVA platform
+* Managing a team of 9 quants analysts and developers in London and Toronto
+* CUDA GPU / C++ (11) CPU Hybrid Compute environment
+* Grid Computing
+* Adjoint Algorithmic Differentiation (AAD): CPU/GPU implementation using NAG dco/dco_map
+* Multi-asset platform: IR & FX, later inflation, commodities and equity derivatives
+* Deep Learning applications in XVA
+* Polling and Political Analysis
+
 # cva / interest rate swap / hjm interest rate model
 
 Reduced memory usage and batched Monte Carlo simulation to be suitable for CUDA acceleration [02/06/2020]
