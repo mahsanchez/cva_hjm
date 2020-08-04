@@ -7,7 +7,6 @@ Skills Gained (Andrew Green)
 * Adjoint Algorithmic Differentiation (AAD): CPU/GPU implementation using NAG dco/dco_map
 * Multi-asset platform: IR & FX, later inflation, commodities and equity derivatives
 * Deep Learning applications in XVA
-* Polling and Political Analysis
 
 # cva / interest rate swap / hjm interest rate model
 
