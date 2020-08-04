@@ -1,6 +1,6 @@
 Skills Gained (Andrew Green)
 
-* Leading the development of a new XVA platform
+* Develop a new XVA platform
 * CUDA GPU / C++ (11) CPU Hybrid Compute environment
 * Grid Computing
 * Adjoint Algorithmic Differentiation (AAD): CPU/GPU implementation using NAG dco/dco_map
