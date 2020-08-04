@@ -34,4 +34,8 @@ TODO - Implement a CUDA Accelerated Kernel for HJM simulation
 
 TODO - Benchmark the solution Measure Performance
 
+TODO - Support negatives Interest Rates
+
+TODO - Perform sensitivity Analysis with AAD
+
 
